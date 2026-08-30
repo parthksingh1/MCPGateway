@@ -1,0 +1,273 @@
+name: mcpgateway
+
+x-node-env: &node-env
+  NODE_ENV: production
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+  SERVICE_VERSION: 0.1.0
+
+x-restart: &restart
+  restart: unless-stopped
+
+services:
+  # ---------------------------------------------------------------- datastores
+  postgres:
+    image: postgres:16-alpine
+    <<: *restart
+    environment:
+      POSTGRES_USER: mcpgw
+      POSTGRES_PASSWORD: mcpgw
+      POSTGRES_DB: mcpgateway
+    ports: ['5432:5432']
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U mcpgw -d mcpgateway']
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  redis:
+    image: redis:7-alpine
+    <<: *restart
+    command: ['redis-server', '--appendonly', 'yes', '--save', '""']
+    ports: ['6379:6379']
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  # ------------------------------------------------------------- observability
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.115.1
+    <<: *restart
+    command: ['--config=/etc/otel/config.yaml']
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel/config.yaml:ro
+    ports:
+      - '4317:4317'
+      - '4318:4318'
+      - '8889:8889'
+    depends_on:
+      jaeger:
+        condition: service_started
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.62.0
+    <<: *restart
+    environment:
+      COLLECTOR_OTLP_ENABLED: 'true'
+      METRICS_STORAGE_TYPE: prometheus
+      PROMETHEUS_SERVER_URL: http://prometheus:9090
+    ports:
+      - '16686:16686'
+
+  prometheus:
+    image: prom/prometheus:v3.0.1
+    <<: *restart
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=6h'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - promdata:/prometheus
+    ports: ['9090:9090']
+
+  loki:
+    image: grafana/loki:3.3.2
+    <<: *restart
+    command: ['-config.file=/etc/loki/config.yaml']
+    volumes:
+      - ./loki-config.yaml:/etc/loki/config.yaml:ro
+      - lokidata:/loki
+    ports: ['3100:3100']
+
+  promtail:
+    image: grafana/promtail:3.3.2
+    <<: *restart
+    command: ['-config.file=/etc/promtail/config.yaml']
+    volumes:
+      - ./promtail-config.yaml:/etc/promtail/config.yaml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      loki:
+        condition: service_started
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    <<: *restart
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_AUTH_ANONYMOUS_ENABLED: 'true'
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_USERS_DEFAULT_THEME: dark
+      GF_FEATURE_TOGGLES_ENABLE: traceToMetrics
+      GF_INSTALL_PLUGINS: ''
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafanadata:/var/lib/grafana
+    ports: ['3001:3000']
+    depends_on:
+      prometheus:
+        condition: service_started
+
+  # --------------------------------------------------------------- application
+  identity:
+    build:
+      context: ..
+      dockerfile: infra/docker/mock-idp.Dockerfile
+    <<: *restart
+    environment:
+      <<: *node-env
+      IDP_PORT: 9000
+      IDP_ISSUER: http://localhost:9000
+      OTEL_SERVICE_NAME: identity
+    ports: ['9000:9000']
+    depends_on:
+      otel-collector:
+        condition: service_started
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:9000/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  policy-engine:
+    build:
+      context: ..
+      dockerfile: infra/docker/mcp-policy-engine.Dockerfile
+    <<: *restart
+    environment:
+      <<: *node-env
+      PORT: 7003
+      SERVICE_NAME: mcp-policy-engine
+      EXPECTED_AUDIENCE: mcp:policy-engine
+      OIDC_ISSUER: http://localhost:9000
+      OIDC_ISSUER_INTERNAL: http://identity:9000
+      OTEL_SERVICE_NAME: mcp-policy-engine
+    ports: ['7003:7003']
+    depends_on:
+      identity:
+        condition: service_healthy
+
+  mcp-postgres:
+    build:
+      context: ..
+      dockerfile: infra/docker/mcp-postgres.Dockerfile
+    <<: *restart
+    environment:
+      <<: *node-env
+      PORT: 7002
+      SERVICE_NAME: mcp-postgres
+      EXPECTED_AUDIENCE: mcp:postgres
+      OIDC_ISSUER: http://localhost:9000
+      OIDC_ISSUER_INTERNAL: http://identity:9000
+      WAREHOUSE_DATABASE_URL: postgres://mcpgw:mcpgw@postgres:5432/warehouse
+      OTEL_SERVICE_NAME: mcp-postgres
+    ports: ['7002:7002']
+    depends_on:
+      postgres:
+        condition: service_healthy
+      identity:
+        condition: service_healthy
+
+  mcp-salesforce:
+    build:
+      context: ..
+      dockerfile: infra/docker/mcp-salesforce.Dockerfile
+    <<: *restart
+    environment:
+      <<: *node-env
+      PORT: 7001
+      SERVICE_NAME: mcp-salesforce
+      EXPECTED_AUDIENCE: mcp:salesforce
+      OIDC_ISSUER: http://localhost:9000
+      OIDC_ISSUER_INTERNAL: http://identity:9000
+      OTEL_SERVICE_NAME: mcp-salesforce
+    ports: ['7001:7001']
+    depends_on:
+      identity:
+        condition: service_healthy
+
+  gateway:
+    build:
+      context: ..
+      dockerfile: infra/docker/gateway.Dockerfile
+    <<: *restart
+    environment:
+      <<: *node-env
+      GATEWAY_PORT: 8080
+      GATEWAY_HOST: 0.0.0.0
+      GATEWAY_PUBLIC_URL: http://localhost:8080
+      DASHBOARD_ORIGIN: http://localhost:3000
+      DATABASE_URL: postgres://mcpgw:mcpgw@postgres:5432/mcpgateway
+      AUDIT_DATABASE_URL: postgres://mcpgw_audit:mcpgw_audit@postgres:5432/mcpgateway
+      REDIS_URL: redis://redis:6379
+      OIDC_ISSUER: http://localhost:9000
+      OIDC_ISSUER_INTERNAL: http://identity:9000
+      GATEWAY_CLIENT_ID: mcp-gateway
+      GATEWAY_CLIENT_SECRET: gateway-secret-change-me
+      DASHBOARD_CLIENT_ID: dashboard-bff
+      DASHBOARD_CLIENT_SECRET: dashboard-secret-change-me
+      SESSION_COOKIE_SECRET: local-development-session-secret-value-32
+      MCP_SALESFORCE_URL: http://mcp-salesforce:7001/mcp
+      MCP_POSTGRES_URL: http://mcp-postgres:7002/mcp
+      MCP_POLICY_URL: http://policy-engine:7003/mcp
+      JAEGER_UI_URL: http://localhost:16686
+      GRAFANA_URL: http://localhost:3001
+      OTEL_SERVICE_NAME: gateway
+    ports: ['8080:8080']
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      identity:
+        condition: service_healthy
+      policy-engine:
+        condition: service_started
+      mcp-postgres:
+        condition: service_started
+      mcp-salesforce:
+        condition: service_started
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:8080/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 40
+
+  console:
+    build:
+      context: ..
+      dockerfile: infra/docker/dashboard.Dockerfile
+    <<: *restart
+    ports: ['3000:8080']
+    depends_on:
+      gateway:
+        condition: service_started
+
+volumes:
+  pgdata:
+  redisdata:
+  promdata:
+  lokidata:
+  grafanadata:
