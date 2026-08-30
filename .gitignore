@@ -1,0 +1,15 @@
+node_modules/
+dist/
+build/
+coverage/
+.turbo/
+*.tsbuildinfo
+.env
+.env.local
+!.env.example
+.DS_Store
+playwright-report/
+test-results/
+.pnpm-store/
+*.log
+docs/BENCHMARKS.results.json
