@@ -1,0 +1,79 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+        cors:
+          allowed_origins:
+            - http://localhost:3000
+
+processors:
+  # Bound the collector's memory before it becomes the thing that falls over.
+  memory_limiter:
+    check_interval: 2s
+    limit_percentage: 75
+    spike_limit_percentage: 20
+
+  batch:
+    timeout: 2s
+    send_batch_size: 512
+    send_batch_max_size: 1024
+
+  # Stamp every signal with the cluster it came from so a future multi-cluster
+  # setup does not need a dashboard rewrite.
+  resource:
+    attributes:
+      - key: deployment.cluster
+        value: local
+        action: upsert
+
+connectors:
+  # Derives RED metrics (calls / duration) straight from spans, which is what
+  # feeds the latency panels on the SLO dashboard without any manual histogram
+  # bookkeeping in application code.
+  spanmetrics:
+    histogram:
+      explicit:
+        buckets: [1ms, 5ms, 10ms, 25ms, 50ms, 100ms, 200ms, 400ms, 800ms, 1600ms, 3200ms]
+    dimensions:
+      - name: mcpgw.tenant.id
+      - name: mcpgw.mcp.server
+      - name: mcpgw.mcp.tool
+      - name: mcpgw.decision
+    metrics_flush_interval: 10s
+
+exporters:
+  otlp/jaeger:
+    endpoint: jaeger:4317
+    tls:
+      insecure: true
+
+  prometheus:
+    endpoint: 0.0.0.0:8889
+    resource_to_telemetry_conversion:
+      enabled: true
+
+  debug:
+    verbosity: basic
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+service:
+  extensions: [health_check]
+  telemetry:
+    logs:
+      level: warn
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, batch]
+      exporters: [otlp/jaeger, spanmetrics]
+
+    metrics:
+      receivers: [otlp, spanmetrics]
+      processors: [memory_limiter, resource, batch]
+      exporters: [prometheus]
