@@ -1,0 +1,23 @@
+{
+  "name": "@mcpgateway/identity",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx watch --import ./src/instrumentation.ts src/main.ts",
+    "start": "node --import ./dist/instrumentation.js dist/main.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@fastify/formbody": "^7.4.0",
+    "@mcpgateway/shared": "workspace:*",
+    "@mcpgateway/telemetry": "workspace:*",
+    "fastify": "^4.29.0",
+    "jose": "^5.9.6",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@mcpgateway/auth": "workspace:*"
+  }
+}
