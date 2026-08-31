@@ -1,0 +1,237 @@
+{
+  "$comment": "Subjects, clients and entitlements served by the local identity provider. Scope sets are deliberately role-shaped so that an exchanged downstream token differs visibly between an analyst and a manager.",
+  "scopeSets": {
+    "viewer": ["salesforce:read", "postgres:read"],
+    "analyst": ["salesforce:read", "postgres:read", "postgres:query"],
+    "manager": [
+      "salesforce:read",
+      "salesforce:read.team",
+      "salesforce:write",
+      "postgres:read",
+      "postgres:query"
+    ],
+    "admin": [
+      "salesforce:read",
+      "salesforce:read.team",
+      "salesforce:read.all",
+      "salesforce:write",
+      "postgres:read",
+      "postgres:query",
+      "postgres:admin",
+      "policy:read",
+      "gateway:admin"
+    ]
+  },
+  "audienceNamespaces": {
+    "mcp:salesforce": ["salesforce"],
+    "mcp:postgres": ["postgres"],
+    "mcp:policy-engine": ["policy"]
+  },
+  "users": [
+    {
+      "id": "usr_alice",
+      "email": "alice.chen@acme-corp.com",
+      "password": "Passw0rd!",
+      "name": "Alice Chen",
+      "tenantId": "acme-corp",
+      "role": "analyst",
+      "title": "Revenue Analyst",
+      "territory": "West",
+      "managerId": "usr_bob"
+    },
+    {
+      "id": "usr_bob",
+      "email": "bob.martinez@acme-corp.com",
+      "password": "Passw0rd!",
+      "name": "Bob Martinez",
+      "tenantId": "acme-corp",
+      "role": "manager",
+      "title": "Director, West Region",
+      "territory": "West",
+      "managerId": null
+    },
+    {
+      "id": "usr_dana",
+      "email": "dana.olsen@acme-corp.com",
+      "password": "Passw0rd!",
+      "name": "Dana Olsen",
+      "tenantId": "acme-corp",
+      "role": "admin",
+      "title": "Platform Administrator",
+      "territory": null,
+      "managerId": null
+    },
+    {
+      "id": "usr_evan",
+      "email": "evan.reyes@acme-corp.com",
+      "password": "Passw0rd!",
+      "name": "Evan Reyes",
+      "tenantId": "acme-corp",
+      "role": "viewer",
+      "title": "Account Executive",
+      "territory": "East",
+      "managerId": "usr_priya"
+    },
+    {
+      "id": "usr_priya",
+      "email": "priya.nair@acme-corp.com",
+      "password": "Passw0rd!",
+      "name": "Priya Nair",
+      "tenantId": "acme-corp",
+      "role": "analyst",
+      "title": "Revenue Analyst",
+      "territory": "East",
+      "managerId": "usr_bob"
+    },
+    {
+      "id": "usr_grace",
+      "email": "grace.kim@globex.io",
+      "password": "Passw0rd!",
+      "name": "Grace Kim",
+      "tenantId": "globex",
+      "role": "manager",
+      "title": "Head of Sales Operations",
+      "territory": "North",
+      "managerId": null
+    },
+    {
+      "id": "usr_hugo",
+      "email": "hugo.silva@globex.io",
+      "password": "Passw0rd!",
+      "name": "Hugo Silva",
+      "tenantId": "globex",
+      "role": "analyst",
+      "title": "Sales Analyst",
+      "territory": "North",
+      "managerId": "usr_grace"
+    },
+    {
+      "id": "usr_ines",
+      "email": "ines.dubois@globex.io",
+      "password": "Passw0rd!",
+      "name": "Ines Dubois",
+      "tenantId": "globex",
+      "role": "admin",
+      "title": "Platform Administrator",
+      "territory": null,
+      "managerId": null
+    },
+    {
+      "id": "usr_jonah",
+      "email": "jonah.wright@globex.io",
+      "password": "Passw0rd!",
+      "name": "Jonah Wright",
+      "tenantId": "globex",
+      "role": "viewer",
+      "title": "Account Executive",
+      "territory": "South",
+      "managerId": "usr_grace"
+    },
+    {
+      "id": "usr_karen",
+      "email": "karen.blake@initech.dev",
+      "password": "Passw0rd!",
+      "name": "Karen Blake",
+      "tenantId": "initech",
+      "role": "manager",
+      "title": "Commercial Lead",
+      "territory": "Central",
+      "managerId": null
+    },
+    {
+      "id": "usr_liam",
+      "email": "liam.novak@initech.dev",
+      "password": "Passw0rd!",
+      "name": "Liam Novak",
+      "tenantId": "initech",
+      "role": "analyst",
+      "title": "Business Analyst",
+      "territory": "Central",
+      "managerId": "usr_karen"
+    },
+    {
+      "id": "usr_mia",
+      "email": "mia.torres@initech.dev",
+      "password": "Passw0rd!",
+      "name": "Mia Torres",
+      "tenantId": "initech",
+      "role": "viewer",
+      "title": "Support Specialist",
+      "territory": "Central",
+      "managerId": "usr_karen"
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "dashboard-bff",
+      "clientSecret": "dashboard-secret-change-me",
+      "name": "Operations Console",
+      "confidential": true,
+      "redirectUris": [
+        "http://localhost:8080/auth/callback",
+        "http://127.0.0.1:8080/auth/callback"
+      ],
+      "allowedScopes": [
+        "openid",
+        "profile",
+        "email",
+        "offline_access",
+        "salesforce:read",
+        "salesforce:read.team",
+        "salesforce:read.all",
+        "salesforce:write",
+        "postgres:read",
+        "postgres:query",
+        "postgres:admin",
+        "policy:read",
+        "gateway:admin"
+      ],
+      "allowedGrants": ["authorization_code", "refresh_token"]
+    },
+    {
+      "clientId": "mcp-gateway",
+      "clientSecret": "gateway-secret-change-me",
+      "name": "MCP Gateway",
+      "confidential": true,
+      "redirectUris": [],
+      "allowedScopes": [
+        "salesforce:read",
+        "salesforce:read.team",
+        "salesforce:read.all",
+        "salesforce:write",
+        "postgres:read",
+        "postgres:query",
+        "postgres:admin",
+        "policy:read"
+      ],
+      "allowedGrants": ["client_credentials", "urn:ietf:params:oauth:grant-type:token-exchange"]
+    },
+    {
+      "clientId": "claude-desktop",
+      "clientSecret": null,
+      "name": "Claude Desktop",
+      "confidential": false,
+      "redirectUris": ["http://127.0.0.1:33418/callback", "http://localhost:33418/callback"],
+      "allowedScopes": [
+        "openid",
+        "profile",
+        "email",
+        "offline_access",
+        "salesforce:read",
+        "salesforce:read.team",
+        "postgres:read",
+        "postgres:query"
+      ],
+      "allowedGrants": ["authorization_code", "refresh_token"]
+    },
+    {
+      "clientId": "internal-agent",
+      "clientSecret": "internal-agent-secret",
+      "name": "Internal Automation Agent",
+      "confidential": true,
+      "redirectUris": [],
+      "allowedScopes": ["postgres:read", "postgres:query"],
+      "allowedGrants": ["client_credentials"]
+    }
+  ]
+}
