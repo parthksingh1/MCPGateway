@@ -7,6 +7,7 @@ export default defineWorkspace([
       include: ['packages/**/src/**/*.test.ts', 'apps/**/src/**/*.test.ts'],
       environment: 'node',
       globals: false,
+      env: { LOG_LEVEL: 'silent', OTEL_SDK_DISABLED: 'true' },
       coverage: {
         provider: 'v8',
         reporter: ['text', 'json-summary', 'html'],
@@ -26,6 +27,7 @@ export default defineWorkspace([
       include: ['tests/integration/**/*.test.ts'],
       environment: 'node',
       globals: false,
+      env: { LOG_LEVEL: 'silent', OTEL_SDK_DISABLED: 'true' },
       testTimeout: 180_000,
       hookTimeout: 180_000,
       pool: 'forks',
