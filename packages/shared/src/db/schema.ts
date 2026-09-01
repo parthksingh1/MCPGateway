@@ -151,3 +151,20 @@ export type UserRow = typeof users.$inferSelect;
 export type RateLimitConfigRow = typeof rateLimitConfigs.$inferSelect;
 export type AuditEventRow = typeof auditEvents.$inferSelect;
 export type OAuthClientRow = typeof oauthClients.$inferSelect;
+
+/**
+ * Head of each tenant's audit chain.
+ *
+ * Appending is serialised by taking a row lock here inside the same
+ * transaction as the insert, which is what guarantees a total order per tenant
+ * even with several gateway replicas writing at once. The lock is per tenant,
+ * so tenants never contend with each other.
+ */
+export const auditChainHeads = pgTable('audit_chain_heads', {
+  tenantId: text('tenant_id').primaryKey(),
+  prevHash: char('prev_hash', { length: 64 }).notNull(),
+  length: integer('length').notNull().default(0),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type AuditChainHeadRow = typeof auditChainHeads.$inferSelect;
