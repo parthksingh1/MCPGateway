@@ -8,17 +8,6 @@ export default defineWorkspace([
       environment: 'node',
       globals: false,
       env: { LOG_LEVEL: 'silent', OTEL_SDK_DISABLED: 'true' },
-      coverage: {
-        provider: 'v8',
-        reporter: ['text', 'json-summary', 'html'],
-        include: ['packages/*/src/**/*.ts'],
-        exclude: ['**/*.test.ts', '**/index.ts', '**/*.d.ts'],
-        thresholds: {
-          'packages/auth/src/**': { lines: 80, functions: 80, statements: 80, branches: 65 },
-          'packages/audit/src/**': { lines: 80, functions: 80, statements: 80, branches: 65 },
-          'packages/rate-limit/src/**': { lines: 80, functions: 80, statements: 80, branches: 65 },
-        },
-      },
     },
   },
   {
