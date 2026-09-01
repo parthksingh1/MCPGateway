@@ -38,6 +38,7 @@
     "@mcpgateway/rate-limit": "workspace:^",
     "@mcpgateway/shared": "workspace:^",
     "@mcpgateway/telemetry": "workspace:^",
+    "@modelcontextprotocol/sdk": "1.30.0",
     "@playwright/test": "^1.49.1",
     "@testcontainers/postgresql": "^12.1.0",
     "@testcontainers/redis": "^12.1.0",
