@@ -1,0 +1,184 @@
+# Baseline policy bundle.
+#
+# Evaluation is ordered by `priority` ascending; the first rule whose match
+# succeeds and whose effect is `allow` or `deny` decides the request. Rules with
+# effect `annotate` attach metadata (currently a rate tier) and evaluation
+# continues past them.
+#
+# The default when nothing matches is DENY. That is why `allow-known-tools`
+# exists at the highest priority number: reaching the end of the bundle without
+# a decision means the request was for something this deployment has never been
+# told about, and refusing is the correct answer.
+#
+# Paths address the evaluation document:
+#   tool                 fully qualified tool name, e.g. "sf.query"
+#   server               "salesforce" | "postgres" | "policy-engine"
+#   principal.role       admin | manager | analyst | viewer
+#   principal.scopes     scopes carried by the caller's token
+#   principal.tenantId   caller's tenant
+#   principal.territory  caller's book of business
+#   tenant.plan          enterprise | pro | restricted
+#   arguments.*          the tool call arguments
+
+version: 1
+name: baseline
+defaultEffect: deny
+defaultReason: No policy rule permits this call
+
+rules:
+  # --- argument-content rules ------------------------------------------------
+  - id: deny-destructive-sql
+    priority: 5
+    effect: deny
+    description: >
+      The warehouse tool is contractually read-only. A statement that mutates
+      data or schema is refused at the policy layer as well as by the read-only
+      transaction, so the refusal is visible in the audit log rather than
+      surfacing as a database error.
+    reason: Warehouse access is read-only; the statement attempts a write
+    match:
+      all:
+        - path: tool
+          op: eq
+          value: pg.query
+        - path: arguments.sql
+          op: matches
+          value: '(?is)\b(insert|update|delete|drop|alter|truncate|grant|revoke|create|copy)\b'
+
+  - id: deny-pii-on-restricted-plan
+    priority: 10
+    effect: deny
+    description: >
+      Tenants on the restricted plan have not signed the data processing terms
+      that cover personal data leaving the source system, so queries that reach
+      for identifying columns are refused regardless of the caller's role.
+    reason: The restricted plan does not permit querying personal data fields
+    match:
+      all:
+        - path: tenant.plan
+          op: eq
+          value: restricted
+        - path: tool
+          op: in
+          value: [sf.query, sf.get_contact, pg.query]
+        - any:
+            - path: arguments.sql
+              op: matches
+              value: '(?i)(ssn|social_security|tax_id|date_of_birth|passport|national_id|email|phone)'
+            - path: arguments.soql
+              op: matches
+              value: '(?i)(ssn|social_security|tax_id|birthdate|passport|national_id|email|phone)'
+            - path: arguments.fields
+              op: contains_any
+              value: [ssn, tax_id, birthdate, national_id, email, phone]
+
+  - id: deny-cross-tenant-access
+    priority: 15
+    effect: deny
+    description: >
+      A tool argument naming a tenant other than the caller's own is refused.
+      Tenant isolation is enforced in each server as well; this rule turns an
+      attempt into an explicit, auditable denial rather than an empty result.
+    reason: Arguments reference a tenant other than the caller's own
+    match:
+      all:
+        - path: arguments.tenantId
+          op: exists
+        - path: arguments.tenantId
+          op: ne_field
+          value: principal.tenantId
+
+  - id: deny-bulk-extraction
+    priority: 30
+    effect: deny
+    description: >
+      Caps the size of a single result set. Bulk extraction is a legitimate
+      operation, but it belongs in a reviewed export pipeline rather than an
+      ad-hoc agent tool call.
+    reason: Requested row limit exceeds the interactive query ceiling of 5000
+    match:
+      any:
+        - path: arguments.limit
+          op: gt
+          value: 5000
+        - path: arguments.maxRows
+          op: gt
+          value: 5000
+
+  # --- scope and role rules --------------------------------------------------
+  - id: deny-write-without-scope
+    priority: 20
+    effect: deny
+    description: >
+      Defence in depth. The downstream token should never carry a write scope
+      the caller is not entitled to, so reaching this rule means something
+      upstream is wrong and the call must not proceed.
+    reason: Caller does not hold the write scope this tool requires
+    match:
+      all:
+        - path: tool
+          op: in
+          value: [sf.create_task]
+        - path: principal.scopes
+          op: not_contains
+          value: salesforce:write
+
+  - id: deny-warehouse-query-for-viewers
+    priority: 40
+    effect: deny
+    description: >
+      Viewers may inspect warehouse structure but not run queries against it.
+      Schema is not sensitive; row data is.
+    reason: The viewer role cannot execute warehouse queries
+    match:
+      all:
+        - path: principal.role
+          op: eq
+          value: viewer
+        - path: tool
+          op: eq
+          value: pg.query
+
+  # --- rate tier overrides ---------------------------------------------------
+  - id: tier-enterprise-burst
+    priority: 50
+    effect: annotate
+    rateTier: burst
+    description: Enterprise tenants are entitled to the burst rate tier.
+    match:
+      all:
+        - path: tenant.plan
+          op: eq
+          value: enterprise
+
+  - id: tier-restricted-throttle
+    priority: 55
+    effect: annotate
+    rateTier: throttled
+    description: Restricted tenants run against the throttled rate tier.
+    match:
+      all:
+        - path: tenant.plan
+          op: eq
+          value: restricted
+
+  # --- base case -------------------------------------------------------------
+  - id: allow-known-tools
+    priority: 1000
+    effect: allow
+    description: >
+      Permits the catalogue this deployment knows about. Anything not listed
+      here falls through to the bundle's default effect, which is deny.
+    reason: Tool is permitted by the baseline catalogue
+    match:
+      all:
+        - path: tool
+          op: in
+          value:
+            - sf.query
+            - sf.get_contact
+            - sf.list_opportunities
+            - sf.create_task
+            - pg.list_tables
+            - pg.describe_table
+            - pg.query
