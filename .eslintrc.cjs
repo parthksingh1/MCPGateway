@@ -43,7 +43,13 @@ module.exports = {
   },
   overrides: [
     {
-      files: ['scripts/**/*.ts', '**/*.test.ts', '**/*.spec.ts', 'apps/dashboard/**/*.tsx'],
+      files: [
+        'scripts/**/*.ts',
+        '**/fixtures/**/*.ts',
+        '**/*.test.ts',
+        '**/*.spec.ts',
+        'apps/dashboard/**/*.tsx',
+      ],
       rules: { 'no-console': 'off' },
     },
     {
