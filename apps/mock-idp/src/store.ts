@@ -58,7 +58,23 @@ export interface Directory {
   listUsers(): readonly SeedUser[];
 }
 
-const ALWAYS_GRANTED = ['openid', 'profile', 'email'] as const;
+/**
+ * Granted to every subject.
+ *
+ * `policy:evaluate` is here so that the gateway's call to the policy decision
+ * point is made with the caller's own exchanged token rather than a service
+ * credential. The policy engine is reasoning about this user's request, so it
+ * should be told who that user is by the same mechanism as everything else.
+ * `policy:read` exposes the rule catalogue, which is deployment configuration
+ * rather than tenant data.
+ */
+const ALWAYS_GRANTED = [
+  'openid',
+  'profile',
+  'email',
+  'policy:evaluate',
+  'policy:read',
+] as const;
 
 export async function loadDirectory(
   path = new URL('../seed.json', import.meta.url),
