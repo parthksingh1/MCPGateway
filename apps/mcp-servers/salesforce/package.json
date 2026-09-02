@@ -1,0 +1,19 @@
+{
+  "name": "@mcpgateway/mcp-salesforce",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx watch --import ./src/instrumentation.ts src/main.ts",
+    "start": "node --import ./dist/instrumentation.js dist/main.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "fixtures": "tsx fixtures/generate.ts"
+  },
+  "dependencies": {
+    "@mcpgateway/mcp-runtime": "workspace:*",
+    "@mcpgateway/shared": "workspace:*",
+    "@mcpgateway/telemetry": "workspace:*",
+    "zod": "^3.24.1"
+  }
+}
