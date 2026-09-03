@@ -18,7 +18,7 @@ services:
       POSTGRES_USER: mcpgw
       POSTGRES_PASSWORD: mcpgw
       POSTGRES_DB: mcpgateway
-    ports: ['5432:5432']
+    ports: ['${POSTGRES_PORT:-5432}:5432']
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./postgres-init:/docker-entrypoint-initdb.d:ro
@@ -32,7 +32,7 @@ services:
     image: redis:7-alpine
     <<: *restart
     command: ['redis-server', '--appendonly', 'yes', '--save', '""']
-    ports: ['6379:6379']
+    ports: ['${REDIS_PORT:-6379}:6379']
     volumes:
       - redisdata:/data
     healthcheck:
@@ -49,9 +49,9 @@ services:
     volumes:
       - ./otel-collector-config.yaml:/etc/otel/config.yaml:ro
     ports:
-      - '4317:4317'
-      - '4318:4318'
-      - '8889:8889'
+      - '${OTLP_GRPC_PORT:-4317}:4317'
+      - '${OTLP_HTTP_PORT:-4318}:4318'
+      - '${COLLECTOR_METRICS_PORT:-8889}:8889'
     depends_on:
       jaeger:
         condition: service_started
@@ -64,7 +64,7 @@ services:
       METRICS_STORAGE_TYPE: prometheus
       PROMETHEUS_SERVER_URL: http://prometheus:9090
     ports:
-      - '16686:16686'
+      - '${JAEGER_PORT:-16686}:16686'
 
   prometheus:
     image: prom/prometheus:v3.0.1
@@ -76,7 +76,7 @@ services:
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - promdata:/prometheus
-    ports: ['9090:9090']
+    ports: ['${PROMETHEUS_PORT:-9090}:9090']
 
   loki:
     image: grafana/loki:3.3.2
@@ -85,7 +85,7 @@ services:
     volumes:
       - ./loki-config.yaml:/etc/loki/config.yaml:ro
       - lokidata:/loki
-    ports: ['3100:3100']
+    ports: ['${LOKI_PORT:-3100}:3100']
 
   promtail:
     image: grafana/promtail:3.3.2
@@ -113,7 +113,7 @@ services:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
       - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
       - grafanadata:/var/lib/grafana
-    ports: ['3001:3000']
+    ports: ['${GRAFANA_PORT:-3001}:3000']
     depends_on:
       prometheus:
         condition: service_started
@@ -129,7 +129,7 @@ services:
       IDP_PORT: 9000
       IDP_ISSUER: http://localhost:9000
       OTEL_SERVICE_NAME: identity
-    ports: ['9000:9000']
+    ports: ['${IDP_PORT:-9000}:9000']
     depends_on:
       otel-collector:
         condition: service_started
@@ -158,7 +158,7 @@ services:
       OIDC_ISSUER: http://localhost:9000
       OIDC_ISSUER_INTERNAL: http://identity:9000
       OTEL_SERVICE_NAME: mcp-policy-engine
-    ports: ['7003:7003']
+    ports: ['${POLICY_PORT:-7003}:7003']
     depends_on:
       identity:
         condition: service_healthy
@@ -177,7 +177,7 @@ services:
       OIDC_ISSUER_INTERNAL: http://identity:9000
       WAREHOUSE_DATABASE_URL: postgres://mcpgw:mcpgw@postgres:5432/warehouse
       OTEL_SERVICE_NAME: mcp-postgres
-    ports: ['7002:7002']
+    ports: ['${POSTGRES_MCP_PORT:-7002}:7002']
     depends_on:
       postgres:
         condition: service_healthy
@@ -197,7 +197,7 @@ services:
       OIDC_ISSUER: http://localhost:9000
       OIDC_ISSUER_INTERNAL: http://identity:9000
       OTEL_SERVICE_NAME: mcp-salesforce
-    ports: ['7001:7001']
+    ports: ['${SALESFORCE_PORT:-7001}:7001']
     depends_on:
       identity:
         condition: service_healthy
@@ -229,7 +229,7 @@ services:
       JAEGER_UI_URL: http://localhost:16686
       GRAFANA_URL: http://localhost:3001
       OTEL_SERVICE_NAME: gateway
-    ports: ['8080:8080']
+    ports: ['${GATEWAY_PORT:-8080}:8080']
     depends_on:
       postgres:
         condition: service_healthy
@@ -260,7 +260,7 @@ services:
       context: ..
       dockerfile: infra/docker/dashboard.Dockerfile
     <<: *restart
-    ports: ['3000:8080']
+    ports: ['${CONSOLE_PORT:-3000}:8080']
     depends_on:
       gateway:
         condition: service_started
