@@ -111,6 +111,43 @@ importers:
         specifier: ^3.24.1
         version: 3.25.76
 
+  apps/mcp-servers/postgres:
+    dependencies:
+      '@mcpgateway/mcp-runtime':
+        specifier: workspace:*
+        version: link:../../../packages/mcp-runtime
+      '@mcpgateway/shared':
+        specifier: workspace:*
+        version: link:../../../packages/shared
+      '@mcpgateway/telemetry':
+        specifier: workspace:*
+        version: link:../../../packages/telemetry
+      pg:
+        specifier: ^8.13.1
+        version: 8.23.0
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
+    devDependencies:
+      '@types/pg':
+        specifier: ^8.11.10
+        version: 8.23.1
+
+  apps/mcp-servers/salesforce:
+    dependencies:
+      '@mcpgateway/mcp-runtime':
+        specifier: workspace:*
+        version: link:../../../packages/mcp-runtime
+      '@mcpgateway/shared':
+        specifier: workspace:*
+        version: link:../../../packages/shared
+      '@mcpgateway/telemetry':
+        specifier: workspace:*
+        version: link:../../../packages/telemetry
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
+
   apps/mock-idp:
     dependencies:
       '@fastify/formbody':
