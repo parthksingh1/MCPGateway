@@ -23,7 +23,8 @@ const plugin: FastifyPluginAsync<TelemetryPluginOptions> = async (app, options) 
 
   app.addHook('onRequest', async (request, reply) => {
     const inbound = request.headers['x-request-id'];
-    request.requestId = typeof inbound === 'string' && inbound.length <= 200 ? inbound : randomUUID();
+    request.requestId =
+      typeof inbound === 'string' && inbound.length <= 200 ? inbound : randomUUID();
     void reply.header('x-request-id', request.requestId);
   });
 

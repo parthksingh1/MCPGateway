@@ -39,7 +39,8 @@ const plugin: FastifyPluginAsync<TenantContextOptions> = async (app, options) =>
 
   const resolveTenant = async (request: FastifyRequest): Promise<void> => {
     const principal = request.principal;
-    if (!principal) throw new UnauthenticatedError('Tenant context requires an authenticated caller');
+    if (!principal)
+      throw new UnauthenticatedError('Tenant context requires an authenticated caller');
 
     const cached = cache.get(principal.tenantId);
     if (cached && cached.expiresAt > Date.now()) {
