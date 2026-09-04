@@ -68,13 +68,7 @@ export interface Directory {
  * `policy:read` exposes the rule catalogue, which is deployment configuration
  * rather than tenant data.
  */
-const ALWAYS_GRANTED = [
-  'openid',
-  'profile',
-  'email',
-  'policy:evaluate',
-  'policy:read',
-] as const;
+const ALWAYS_GRANTED = ['openid', 'profile', 'email', 'policy:evaluate', 'policy:read'] as const;
 
 export async function loadDirectory(
   path = new URL('../seed.json', import.meta.url),
