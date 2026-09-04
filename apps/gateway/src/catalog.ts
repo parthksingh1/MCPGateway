@@ -72,7 +72,8 @@ export const TOOL_CATALOG: readonly CatalogEntry[] = [
     name: 'pg.query',
     server: 'postgres',
     title: 'Run a read-only warehouse query',
-    description: 'Execute a single SELECT against the warehouse under the caller own database role.',
+    description:
+      'Execute a single SELECT against the warehouse under the caller own database role.',
     requiredScopes: ['postgres:query'],
     readOnly: true,
   },

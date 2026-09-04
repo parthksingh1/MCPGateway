@@ -12,10 +12,7 @@ async function main(): Promise<void> {
   const app = await buildGateway(services);
 
   await app.listen({ port: config.GATEWAY_PORT, host: config.GATEWAY_HOST });
-  log.info(
-    { port: config.GATEWAY_PORT, issuer: config.OIDC_ISSUER },
-    'gateway listening',
-  );
+  log.info({ port: config.GATEWAY_PORT, issuer: config.OIDC_ISSUER }, 'gateway listening');
 
   let shuttingDown = false;
   for (const signal of ['SIGTERM', 'SIGINT'] as const) {
