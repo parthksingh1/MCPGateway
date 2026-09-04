@@ -4,5 +4,11 @@
     "noEmit": true,
     "types": ["node"]
   },
-  "include": ["scripts/**/*.ts", "tests/**/*.ts", "vitest.workspace.ts", "vitest.config.ts", "playwright.config.ts"]
+  "include": [
+    "scripts/**/*.ts",
+    "tests/**/*.ts",
+    "vitest.workspace.ts",
+    "vitest.config.ts",
+    "playwright.config.ts"
+  ]
 }
