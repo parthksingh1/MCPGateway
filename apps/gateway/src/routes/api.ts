@@ -1,4 +1,9 @@
-import { auditStats, queryAuditEvents, verifyAllChains, verifyTenantChain } from '@mcpgateway/audit';
+import {
+  auditStats,
+  queryAuditEvents,
+  verifyAllChains,
+  verifyTenantChain,
+} from '@mcpgateway/audit';
 import { callUpstreamTool } from '@mcpgateway/mcp-runtime';
 import { BadRequestError, ScopeDeniedError, hasScope } from '@mcpgateway/shared';
 import { sql } from 'drizzle-orm';
@@ -157,9 +162,7 @@ export function createApiRoutes(services: GatewayServices): FastifyPluginAsync {
       const keys = await services.redis.keys(pattern).catch(() => []);
       const buckets = await Promise.all(
         keys.slice(0, 100).map(async (key) => {
-          const state: Record<string, string> = await services.redis
-            .hgetall(key)
-            .catch(() => ({}));
+          const state: Record<string, string> = await services.redis.hgetall(key).catch(() => ({}));
           return {
             key,
             tokens: state.tokens ? Number.parseFloat(state.tokens) : null,
@@ -205,7 +208,8 @@ export function createApiRoutes(services: GatewayServices): FastifyPluginAsync {
         RETURNING id
       `);
 
-      if (updated.rows.length === 0) throw new BadRequestError('No such rate limit for this tenant');
+      if (updated.rows.length === 0)
+        throw new BadRequestError('No such rate limit for this tenant');
 
       // Tell every replica, including this one, to re-read configuration.
       await services.rateLimitConfigs.publishReload();
@@ -284,7 +288,9 @@ export function createApiRoutes(services: GatewayServices): FastifyPluginAsync {
         },
       });
 
-      return result.structured ?? { decision: 'deny', reason: 'Policy engine returned no decision' };
+      return (
+        result.structured ?? { decision: 'deny', reason: 'Policy engine returned no decision' }
+      );
     });
 
     // ----------------------------------------------------------------- tenants
@@ -309,10 +315,13 @@ export function createApiRoutes(services: GatewayServices): FastifyPluginAsync {
       `);
 
       const users = await services.db.db.execute<
-        { id: string; name: string; email: string; role: string; territory: string | null } & Record<
-          string,
-          unknown
-        >
+        {
+          id: string;
+          name: string;
+          email: string;
+          role: string;
+          territory: string | null;
+        } & Record<string, unknown>
       >(sql`
         SELECT id, name, email, role, territory FROM users WHERE tenant_id = ${tenantId} ORDER BY name
       `);

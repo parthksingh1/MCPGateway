@@ -39,7 +39,9 @@ export function createBffRoutes(
   services: GatewayServices,
   sessions: SessionStore,
 ): FastifyPluginAsync {
-  const secure = services.config.NODE_ENV === 'production' && services.config.GATEWAY_PUBLIC_URL.startsWith('https');
+  const secure =
+    services.config.NODE_ENV === 'production' &&
+    services.config.GATEWAY_PUBLIC_URL.startsWith('https');
 
   return async (app) => {
     app.get<{ Querystring: { redirect?: string } }>('/auth/login', async (request, reply) => {
