@@ -1,15 +1,8 @@
 {
   "$comment": "Subjects, clients and entitlements served by the local identity provider. Scope sets are deliberately role-shaped so that an exchanged downstream token differs visibly between an analyst and a manager.",
   "scopeSets": {
-    "viewer": [
-      "salesforce:read",
-      "postgres:read"
-    ],
-    "analyst": [
-      "salesforce:read",
-      "postgres:read",
-      "postgres:query"
-    ],
+    "viewer": ["salesforce:read", "postgres:read"],
+    "analyst": ["salesforce:read", "postgres:read", "postgres:query"],
     "manager": [
       "salesforce:read",
       "salesforce:read.team",
@@ -30,15 +23,9 @@
     ]
   },
   "audienceNamespaces": {
-    "mcp:salesforce": [
-      "salesforce"
-    ],
-    "mcp:postgres": [
-      "postgres"
-    ],
-    "mcp:policy-engine": [
-      "policy"
-    ]
+    "mcp:salesforce": ["salesforce"],
+    "mcp:postgres": ["postgres"],
+    "mcp:policy-engine": ["policy"]
   },
   "users": [
     {
@@ -181,6 +168,7 @@
       "name": "Operations Console",
       "confidential": true,
       "redirectUris": [
+        "http://localhost:3000/auth/callback",
         "http://localhost:8080/auth/callback",
         "http://127.0.0.1:8080/auth/callback"
       ],
@@ -200,10 +188,7 @@
         "gateway:admin",
         "policy:evaluate"
       ],
-      "allowedGrants": [
-        "authorization_code",
-        "refresh_token"
-      ]
+      "allowedGrants": ["authorization_code", "refresh_token"]
     },
     {
       "clientId": "mcp-gateway",
@@ -222,20 +207,14 @@
         "policy:read",
         "policy:evaluate"
       ],
-      "allowedGrants": [
-        "client_credentials",
-        "urn:ietf:params:oauth:grant-type:token-exchange"
-      ]
+      "allowedGrants": ["client_credentials", "urn:ietf:params:oauth:grant-type:token-exchange"]
     },
     {
       "clientId": "claude-desktop",
       "clientSecret": null,
       "name": "Claude Desktop",
       "confidential": false,
-      "redirectUris": [
-        "http://127.0.0.1:33418/callback",
-        "http://localhost:33418/callback"
-      ],
+      "redirectUris": ["http://127.0.0.1:33418/callback", "http://localhost:33418/callback"],
       "allowedScopes": [
         "openid",
         "profile",
@@ -248,10 +227,7 @@
         "policy:evaluate",
         "policy:read"
       ],
-      "allowedGrants": [
-        "authorization_code",
-        "refresh_token"
-      ]
+      "allowedGrants": ["authorization_code", "refresh_token"]
     },
     {
       "clientId": "internal-agent",
@@ -259,13 +235,8 @@
       "name": "Internal Automation Agent",
       "confidential": true,
       "redirectUris": [],
-      "allowedScopes": [
-        "postgres:read",
-        "postgres:query"
-      ],
-      "allowedGrants": [
-        "client_credentials"
-      ]
+      "allowedScopes": ["postgres:read", "postgres:query"],
+      "allowedGrants": ["client_credentials"]
     }
   ]
 }
