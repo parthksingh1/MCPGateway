@@ -211,7 +211,9 @@ services:
       <<: *node-env
       GATEWAY_PORT: 8080
       GATEWAY_HOST: 0.0.0.0
-      GATEWAY_PUBLIC_URL: http://localhost:8080
+      # The console proxies /auth to the gateway, so the OAuth callback returns
+      # through the console origin and the whole flow stays same-origin.
+      GATEWAY_PUBLIC_URL: http://localhost:3000
       DASHBOARD_ORIGIN: http://localhost:3000
       DATABASE_URL: postgres://mcpgw:mcpgw@postgres:5432/mcpgateway
       AUDIT_DATABASE_URL: postgres://mcpgw_audit:mcpgw_audit@postgres:5432/mcpgateway
