@@ -90,14 +90,18 @@ export function parseSoql(query: string): ParsedQuery {
     }
   }
 
-  const { conditions, combinator } = where ? parseWhere(where) : { conditions: [], combinator: 'AND' as const };
+  const { conditions, combinator } = where
+    ? parseWhere(where)
+    : { conditions: [], combinator: 'AND' as const };
 
   return {
     object: resolved,
     fields: selected,
     conditions,
     combinator,
-    orderBy: order ? { field: order, direction: dir?.toUpperCase() === 'DESC' ? 'DESC' : 'ASC' } : null,
+    orderBy: order
+      ? { field: order, direction: dir?.toUpperCase() === 'DESC' ? 'DESC' : 'ASC' }
+      : null,
     limit: limit ? Number.parseInt(limit, 10) : null,
   };
 }
@@ -164,7 +168,9 @@ function compare(actual: unknown, condition: Comparison): boolean {
     return Array.isArray(value) && value.some((candidate) => looseEquals(actual, candidate));
   }
   if (operator === 'LIKE') {
-    return typeof actual === 'string' && typeof value === 'string' && likeToRegExp(value).test(actual);
+    return (
+      typeof actual === 'string' && typeof value === 'string' && likeToRegExp(value).test(actual)
+    );
   }
   if (operator === '=') return looseEquals(actual, value);
   if (operator === '!=') return !looseEquals(actual, value);
@@ -220,7 +226,9 @@ export function executeQuery(
 ): QueryResult {
   let matched = records.filter((record) => {
     if (parsed.conditions.length === 0) return true;
-    const results = parsed.conditions.map((condition) => compare(record[condition.field], condition));
+    const results = parsed.conditions.map((condition) =>
+      compare(record[condition.field], condition),
+    );
     return parsed.combinator === 'OR' ? results.some(Boolean) : results.every(Boolean);
   });
 

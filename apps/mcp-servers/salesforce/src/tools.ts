@@ -85,7 +85,10 @@ export function createCrmTools(dataset: Dataset): ToolDefinition<any>[] {
     inputSchema: {
       stage: z.string().optional().describe('Exact stage name, e.g. Negotiation'),
       minAmount: z.number().min(0).optional().describe('Minimum opportunity amount'),
-      closingBefore: z.string().optional().describe('ISO date; only opportunities closing before it'),
+      closingBefore: z
+        .string()
+        .optional()
+        .describe('ISO date; only opportunities closing before it'),
       openOnly: z.boolean().default(false).describe('Exclude Closed Won and Closed Lost'),
       limit: z.number().int().min(1).max(MAX_ROWS).default(50),
     },
