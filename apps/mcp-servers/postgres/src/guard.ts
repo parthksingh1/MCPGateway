@@ -116,10 +116,9 @@ export function guardStatement(rawSql: string, options: GuardOptions): GuardedSt
 
   const forbiddenKeyword = FORBIDDEN_KEYWORD.exec(withoutTrailing);
   if (forbiddenKeyword) {
-    throw new BadRequestError(
-      `Statement contains the forbidden keyword '${forbiddenKeyword[0]}'`,
-      { keyword: forbiddenKeyword[0] },
-    );
+    throw new BadRequestError(`Statement contains the forbidden keyword '${forbiddenKeyword[0]}'`, {
+      keyword: forbiddenKeyword[0],
+    });
   }
 
   const forbiddenIdentifier = FORBIDDEN_IDENTIFIER.exec(withoutTrailing);

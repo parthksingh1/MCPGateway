@@ -35,9 +35,7 @@ export function createWarehouseTools(warehouse: Warehouse): ToolDefinition<any>[
     description:
       'Returns the columns of a warehouse table and a note on how row-level security applies to it.',
     inputSchema: {
-      table: z
-        .enum(EXPOSED_TABLES)
-        .describe(`One of: ${EXPOSED_TABLES.join(', ')}`),
+      table: z.enum(EXPOSED_TABLES).describe(`One of: ${EXPOSED_TABLES.join(', ')}`),
     },
     requiredScopes: ['postgres:read'],
     readOnly: true,
@@ -61,8 +59,7 @@ export function createWarehouseTools(warehouse: Warehouse): ToolDefinition<any>[
     },
     requiredScopes: ['postgres:query'],
     readOnly: true,
-    handler: async (args, context) =>
-      warehouse.query(callerFrom(context), args.sql, args.limit),
+    handler: async (args, context) => warehouse.query(callerFrom(context), args.sql, args.limit),
   });
 
   return [listTables, describeTable, query];
