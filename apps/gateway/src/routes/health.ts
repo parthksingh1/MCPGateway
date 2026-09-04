@@ -61,7 +61,11 @@ export function createHealthRoutes(services: GatewayServices): FastifyPluginAsyn
       );
       for (const [id, state] of upstreams) checks[`mcp:${id}`] = state;
 
-      const critical: Health[] = [checks.database ?? 'down', checks.redis ?? 'down', checks.identity ?? 'down'];
+      const critical: Health[] = [
+        checks.database ?? 'down',
+        checks.redis ?? 'down',
+        checks.identity ?? 'down',
+      ];
       const ready = critical.every((state) => state === 'ok');
 
       return reply.code(ready ? 200 : 503).send({
