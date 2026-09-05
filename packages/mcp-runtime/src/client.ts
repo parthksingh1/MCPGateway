@@ -1,5 +1,11 @@
 import { UpstreamError, UpstreamUnavailableError } from '@mcpgateway/shared';
-import { injectTraceHeaders, upstreamLatency, withSpan, annotate, GatewayAttr } from '@mcpgateway/telemetry';
+import {
+  injectTraceHeaders,
+  upstreamLatency,
+  withSpan,
+  annotate,
+  GatewayAttr,
+} from '@mcpgateway/telemetry';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 
@@ -53,10 +59,7 @@ export async function callUpstreamTool(call: UpstreamToolCall): Promise<Upstream
     const transport = new StreamableHTTPClientTransport(new URL(call.url), {
       requestInit: { headers },
     });
-    const client = new Client(
-      { name: 'mcpgateway', version: '0.1.0' },
-      { capabilities: {} },
-    );
+    const client = new Client({ name: 'mcpgateway', version: '0.1.0' }, { capabilities: {} });
 
     try {
       await client.connect(transport);

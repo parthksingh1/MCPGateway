@@ -33,10 +33,7 @@ export interface ToolContext {
   readonly requestId: string;
 }
 
-export function principalHasScope(
-  principal: DownstreamPrincipal,
-  required: string,
-): boolean {
+export function principalHasScope(principal: DownstreamPrincipal, required: string): boolean {
   return hasScope(principal.scopes, required);
 }
 
