@@ -9,6 +9,7 @@
     "tests/**/*.ts",
     "vitest.workspace.ts",
     "vitest.config.ts",
-    "playwright.config.ts"
+    "playwright.config.ts",
+    "drizzle.config.ts"
   ]
 }
