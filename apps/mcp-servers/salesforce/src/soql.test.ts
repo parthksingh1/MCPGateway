@@ -90,9 +90,9 @@ describe('parseSoql', () => {
   });
 
   it('rejects a mixed AND/OR clause rather than guessing precedence', () => {
-    expect(() =>
-      parseSoql("SELECT Id FROM Opportunity WHERE a = 1 AND b = 2 OR c = 3"),
-    ).toThrow(/Mixing AND and OR/i);
+    expect(() => parseSoql('SELECT Id FROM Opportunity WHERE a = 1 AND b = 2 OR c = 3')).toThrow(
+      /Mixing AND and OR/i,
+    );
   });
 
   it('rejects an invalid field name', () => {
@@ -190,11 +190,9 @@ describe('executeQuery', () => {
   });
 
   it('caps a caller-supplied LIMIT at the server maximum', () => {
-    const result = executeQuery(
-      parseSoql('SELECT Id FROM Opportunity LIMIT 10000'),
-      RECORDS,
-      { maxRows: 2 },
-    );
+    const result = executeQuery(parseSoql('SELECT Id FROM Opportunity LIMIT 10000'), RECORDS, {
+      maxRows: 2,
+    });
     expect(result.records).toHaveLength(2);
   });
 
