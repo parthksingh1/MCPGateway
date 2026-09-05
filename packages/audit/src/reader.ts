@@ -183,7 +183,9 @@ export async function auditStats(
       ORDER BY count DESC
       LIMIT 8
     `),
-    db.execute<{ tenant_id: string; name: string | null; count: number | string } & Record<string, unknown>>(sql`
+    db.execute<
+      { tenant_id: string; name: string | null; count: number | string } & Record<string, unknown>
+    >(sql`
       SELECT e.tenant_id, t.name, COUNT(*)::bigint AS count
       FROM audit_events e
       LEFT JOIN tenants t ON t.id = e.tenant_id
