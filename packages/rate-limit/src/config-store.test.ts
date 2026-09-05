@@ -252,7 +252,11 @@ describe('RateLimitService', () => {
 
   it('passes the requested cost and tier through', async () => {
     const { limiter, consume } = limiterStub([verdict(true, 'user'), verdict(true, 'tenant')]);
-    await new RateLimitService(limiter, await store()).check({ ...request, cost: 5, tier: 'burst' });
+    await new RateLimitService(limiter, await store()).check({
+      ...request,
+      cost: 5,
+      tier: 'burst',
+    });
 
     expect(consume.mock.calls[0]?.[2]).toBe(5);
   });

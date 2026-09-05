@@ -40,7 +40,12 @@ function fakeRedis(options: { failFirstEvalsha?: boolean; result?: number[] } = 
   return { redis, calls };
 }
 
-const scope = { type: 'user_tool', tenantId: 'acme-corp', userId: 'usr_alice', toolName: 'sf.query' } as const;
+const scope = {
+  type: 'user_tool',
+  tenantId: 'acme-corp',
+  userId: 'usr_alice',
+  toolName: 'sf.query',
+} as const;
 const config = { capacity: 10, refillTokens: 10, refillIntervalMs: 60_000 };
 
 describe('bucketKey', () => {
