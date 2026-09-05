@@ -1,0 +1,27 @@
+# pnpm's node_modules is a forest of symlinks into a content-addressed store.
+# Including it breaks the build context checksum and would be discarded by the
+# install step anyway.
+**/node_modules
+**/dist
+**/.turbo
+**/*.tsbuildinfo
+
+.git
+.github
+.husky
+.run
+.vscode
+.idea
+
+coverage
+playwright-report
+test-results
+tests
+
+docs
+*.md
+!README.md
+
+.env
+.env.local
+.dockerignore
