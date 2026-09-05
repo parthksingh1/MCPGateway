@@ -2,7 +2,7 @@
 # Build context is the repository root so workspace links resolve.
 
 FROM node:20-slim AS base
-ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH CI=true
+ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH CI=true HUSKY=0
 RUN corepack enable
 WORKDIR /app
 
