@@ -53,7 +53,13 @@ const TENANTS: readonly TenantSeed[] = [
     region: 'us-east-1',
     territories: ['West', 'East'],
   },
-  { id: 'globex', name: 'Globex', plan: 'pro', region: 'eu-west-1', territories: ['North', 'South'] },
+  {
+    id: 'globex',
+    name: 'Globex',
+    plan: 'pro',
+    region: 'eu-west-1',
+    territories: ['North', 'South'],
+  },
   {
     id: 'initech',
     name: 'Initech',
@@ -76,18 +82,126 @@ interface UserSeed {
 
 /** Mirrors apps/mock-idp/seed.json. The identity provider is the source of truth. */
 const USERS: readonly UserSeed[] = [
-  { id: 'usr_alice', tenantId: 'acme-corp', email: 'alice.chen@acme-corp.com', name: 'Alice Chen', role: 'analyst', title: 'Revenue Analyst', territory: 'West', managerId: 'usr_bob' },
-  { id: 'usr_bob', tenantId: 'acme-corp', email: 'bob.martinez@acme-corp.com', name: 'Bob Martinez', role: 'manager', title: 'Director, West Region', territory: 'West', managerId: null },
-  { id: 'usr_dana', tenantId: 'acme-corp', email: 'dana.olsen@acme-corp.com', name: 'Dana Olsen', role: 'admin', title: 'Platform Administrator', territory: null, managerId: null },
-  { id: 'usr_evan', tenantId: 'acme-corp', email: 'evan.reyes@acme-corp.com', name: 'Evan Reyes', role: 'viewer', title: 'Account Executive', territory: 'East', managerId: 'usr_priya' },
-  { id: 'usr_priya', tenantId: 'acme-corp', email: 'priya.nair@acme-corp.com', name: 'Priya Nair', role: 'analyst', title: 'Revenue Analyst', territory: 'East', managerId: 'usr_bob' },
-  { id: 'usr_grace', tenantId: 'globex', email: 'grace.kim@globex.io', name: 'Grace Kim', role: 'manager', title: 'Head of Sales Operations', territory: 'North', managerId: null },
-  { id: 'usr_hugo', tenantId: 'globex', email: 'hugo.silva@globex.io', name: 'Hugo Silva', role: 'analyst', title: 'Sales Analyst', territory: 'North', managerId: 'usr_grace' },
-  { id: 'usr_ines', tenantId: 'globex', email: 'ines.dubois@globex.io', name: 'Ines Dubois', role: 'admin', title: 'Platform Administrator', territory: null, managerId: null },
-  { id: 'usr_jonah', tenantId: 'globex', email: 'jonah.wright@globex.io', name: 'Jonah Wright', role: 'viewer', title: 'Account Executive', territory: 'South', managerId: 'usr_grace' },
-  { id: 'usr_karen', tenantId: 'initech', email: 'karen.blake@initech.dev', name: 'Karen Blake', role: 'manager', title: 'Commercial Lead', territory: 'Central', managerId: null },
-  { id: 'usr_liam', tenantId: 'initech', email: 'liam.novak@initech.dev', name: 'Liam Novak', role: 'analyst', title: 'Business Analyst', territory: 'Central', managerId: 'usr_karen' },
-  { id: 'usr_mia', tenantId: 'initech', email: 'mia.torres@initech.dev', name: 'Mia Torres', role: 'viewer', title: 'Support Specialist', territory: 'Central', managerId: 'usr_karen' },
+  {
+    id: 'usr_alice',
+    tenantId: 'acme-corp',
+    email: 'alice.chen@acme-corp.com',
+    name: 'Alice Chen',
+    role: 'analyst',
+    title: 'Revenue Analyst',
+    territory: 'West',
+    managerId: 'usr_bob',
+  },
+  {
+    id: 'usr_bob',
+    tenantId: 'acme-corp',
+    email: 'bob.martinez@acme-corp.com',
+    name: 'Bob Martinez',
+    role: 'manager',
+    title: 'Director, West Region',
+    territory: 'West',
+    managerId: null,
+  },
+  {
+    id: 'usr_dana',
+    tenantId: 'acme-corp',
+    email: 'dana.olsen@acme-corp.com',
+    name: 'Dana Olsen',
+    role: 'admin',
+    title: 'Platform Administrator',
+    territory: null,
+    managerId: null,
+  },
+  {
+    id: 'usr_evan',
+    tenantId: 'acme-corp',
+    email: 'evan.reyes@acme-corp.com',
+    name: 'Evan Reyes',
+    role: 'viewer',
+    title: 'Account Executive',
+    territory: 'East',
+    managerId: 'usr_priya',
+  },
+  {
+    id: 'usr_priya',
+    tenantId: 'acme-corp',
+    email: 'priya.nair@acme-corp.com',
+    name: 'Priya Nair',
+    role: 'analyst',
+    title: 'Revenue Analyst',
+    territory: 'East',
+    managerId: 'usr_bob',
+  },
+  {
+    id: 'usr_grace',
+    tenantId: 'globex',
+    email: 'grace.kim@globex.io',
+    name: 'Grace Kim',
+    role: 'manager',
+    title: 'Head of Sales Operations',
+    territory: 'North',
+    managerId: null,
+  },
+  {
+    id: 'usr_hugo',
+    tenantId: 'globex',
+    email: 'hugo.silva@globex.io',
+    name: 'Hugo Silva',
+    role: 'analyst',
+    title: 'Sales Analyst',
+    territory: 'North',
+    managerId: 'usr_grace',
+  },
+  {
+    id: 'usr_ines',
+    tenantId: 'globex',
+    email: 'ines.dubois@globex.io',
+    name: 'Ines Dubois',
+    role: 'admin',
+    title: 'Platform Administrator',
+    territory: null,
+    managerId: null,
+  },
+  {
+    id: 'usr_jonah',
+    tenantId: 'globex',
+    email: 'jonah.wright@globex.io',
+    name: 'Jonah Wright',
+    role: 'viewer',
+    title: 'Account Executive',
+    territory: 'South',
+    managerId: 'usr_grace',
+  },
+  {
+    id: 'usr_karen',
+    tenantId: 'initech',
+    email: 'karen.blake@initech.dev',
+    name: 'Karen Blake',
+    role: 'manager',
+    title: 'Commercial Lead',
+    territory: 'Central',
+    managerId: null,
+  },
+  {
+    id: 'usr_liam',
+    tenantId: 'initech',
+    email: 'liam.novak@initech.dev',
+    name: 'Liam Novak',
+    role: 'analyst',
+    title: 'Business Analyst',
+    territory: 'Central',
+    managerId: 'usr_karen',
+  },
+  {
+    id: 'usr_mia',
+    tenantId: 'initech',
+    email: 'mia.torres@initech.dev',
+    name: 'Mia Torres',
+    role: 'viewer',
+    title: 'Support Specialist',
+    territory: 'Central',
+    managerId: 'usr_karen',
+  },
 ];
 
 const CLIENTS = [
@@ -95,8 +209,23 @@ const CLIENTS = [
     clientId: 'dashboard-bff',
     name: 'Operations Console',
     confidential: true,
-    redirectUris: ['http://localhost:8080/auth/callback'],
-    allowedScopes: ['openid', 'profile', 'email', 'offline_access', 'salesforce:read', 'salesforce:read.team', 'salesforce:read.all', 'salesforce:write', 'postgres:read', 'postgres:query', 'postgres:admin', 'policy:evaluate', 'policy:read', 'gateway:admin'],
+    redirectUris: ['http://localhost:3000/auth/callback', 'http://localhost:8080/auth/callback'],
+    allowedScopes: [
+      'openid',
+      'profile',
+      'email',
+      'offline_access',
+      'salesforce:read',
+      'salesforce:read.team',
+      'salesforce:read.all',
+      'salesforce:write',
+      'postgres:read',
+      'postgres:query',
+      'postgres:admin',
+      'policy:evaluate',
+      'policy:read',
+      'gateway:admin',
+    ],
     allowedGrants: ['authorization_code', 'refresh_token'],
   },
   {
@@ -104,7 +233,17 @@ const CLIENTS = [
     name: 'MCP Gateway',
     confidential: true,
     redirectUris: [],
-    allowedScopes: ['salesforce:read', 'salesforce:read.team', 'salesforce:read.all', 'salesforce:write', 'postgres:read', 'postgres:query', 'postgres:admin', 'policy:evaluate', 'policy:read'],
+    allowedScopes: [
+      'salesforce:read',
+      'salesforce:read.team',
+      'salesforce:read.all',
+      'salesforce:write',
+      'postgres:read',
+      'postgres:query',
+      'postgres:admin',
+      'policy:evaluate',
+      'policy:read',
+    ],
     allowedGrants: ['client_credentials', 'urn:ietf:params:oauth:grant-type:token-exchange'],
   },
   {
@@ -112,7 +251,18 @@ const CLIENTS = [
     name: 'Claude Desktop',
     confidential: false,
     redirectUris: ['http://127.0.0.1:33418/callback'],
-    allowedScopes: ['openid', 'profile', 'email', 'offline_access', 'salesforce:read', 'salesforce:read.team', 'postgres:read', 'postgres:query', 'policy:evaluate', 'policy:read'],
+    allowedScopes: [
+      'openid',
+      'profile',
+      'email',
+      'offline_access',
+      'salesforce:read',
+      'salesforce:read.team',
+      'postgres:read',
+      'postgres:query',
+      'policy:evaluate',
+      'policy:read',
+    ],
     allowedGrants: ['authorization_code', 'refresh_token'],
   },
   {
@@ -214,17 +364,57 @@ async function seedControlPlane(): Promise<void> {
       await upsertRateLimit(handle.db, tenant.id, 'user_tool', '*', 'default', limits.user, 60_000);
 
       if (limits.burst) {
-        await upsertRateLimit(handle.db, tenant.id, 'tenant', '*', 'burst', limits.tenant * 2, 60_000);
-        await upsertRateLimit(handle.db, tenant.id, 'user_tool', '*', 'burst', limits.burst, 60_000);
+        await upsertRateLimit(
+          handle.db,
+          tenant.id,
+          'tenant',
+          '*',
+          'burst',
+          limits.tenant * 2,
+          60_000,
+        );
+        await upsertRateLimit(
+          handle.db,
+          tenant.id,
+          'user_tool',
+          '*',
+          'burst',
+          limits.burst,
+          60_000,
+        );
       }
 
       // The throttled tier the policy bundle selects for restricted plans.
-      await upsertRateLimit(handle.db, tenant.id, 'tenant', '*', 'throttled', Math.max(60, Math.round(limits.tenant / 4)), 60_000);
-      await upsertRateLimit(handle.db, tenant.id, 'user_tool', '*', 'throttled', Math.max(10, Math.round(limits.user / 4)), 60_000);
+      await upsertRateLimit(
+        handle.db,
+        tenant.id,
+        'tenant',
+        '*',
+        'throttled',
+        Math.max(60, Math.round(limits.tenant / 4)),
+        60_000,
+      );
+      await upsertRateLimit(
+        handle.db,
+        tenant.id,
+        'user_tool',
+        '*',
+        'throttled',
+        Math.max(10, Math.round(limits.user / 4)),
+        60_000,
+      );
 
       // Warehouse queries are the expensive call, so they get their own,
       // tighter bucket regardless of plan.
-      await upsertRateLimit(handle.db, tenant.id, 'user_tool', 'pg.query', 'default', Math.max(10, Math.round(limits.user / 6)), 60_000);
+      await upsertRateLimit(
+        handle.db,
+        tenant.id,
+        'user_tool',
+        'pg.query',
+        'default',
+        Math.max(10, Math.round(limits.user / 6)),
+        60_000,
+      );
     }
     console.log('done');
   } finally {
@@ -276,7 +466,9 @@ async function seedWarehouse(): Promise<void> {
   const handle = createDatabase(warehouseUrl());
   try {
     process.stdout.write('  clearing warehouse ... ');
-    await handle.db.execute(sql`TRUNCATE order_items, orders, customers, products RESTART IDENTITY CASCADE`);
+    await handle.db.execute(
+      sql`TRUNCATE order_items, orders, customers, products RESTART IDENTITY CASCADE`,
+    );
     console.log('done');
 
     process.stdout.write('  products ... ');
@@ -439,8 +631,7 @@ async function seedAuditHistory(count: number): Promise<void> {
 
       // Restricted tenants and viewers are denied more often, which is what
       // makes the console's deny-rate panel show a difference between tenants.
-      const denyChance =
-        tenant.plan === 'restricted' ? 0.28 : user.role === 'viewer' ? 0.12 : 0.04;
+      const denyChance = tenant.plan === 'restricted' ? 0.28 : user.role === 'viewer' ? 0.12 : 0.04;
       const denied = random() < denyChance;
 
       // Warehouse queries are slower than CRM lookups, and a small tail is
@@ -458,12 +649,15 @@ async function seedAuditHistory(count: number): Promise<void> {
         decision: denied ? 'deny' : 'allow',
         denyReason: denied ? pick(DENY_REASONS) : null,
         latencyMs: Math.round(denied ? latency / 3 : latency),
-        traceId: Math.floor(random() * 1e16).toString(16).padStart(32, '0'),
+        traceId: Math.floor(random() * 1e16)
+          .toString(16)
+          .padStart(32, '0'),
         occurredAt: event.at,
       });
 
       written += 1;
-      if (written % 500 === 0) process.stdout.write(`\r  audit history ... ${written}/${events.length}`);
+      if (written % 500 === 0)
+        process.stdout.write(`\r  audit history ... ${written}/${events.length}`);
     }
     console.log(`\r  audit history ... ${written} events                    `);
   } finally {
@@ -471,7 +665,9 @@ async function seedAuditHistory(count: number): Promise<void> {
   }
 }
 
-export async function seed(options: { auditEvents?: number; skipWarehouse?: boolean } = {}): Promise<void> {
+export async function seed(
+  options: { auditEvents?: number; skipWarehouse?: boolean } = {},
+): Promise<void> {
   console.log('Seeding control plane');
   await seedControlPlane();
 
