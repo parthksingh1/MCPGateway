@@ -12,7 +12,11 @@
  * table ownership. The application role cannot reach this code path at all, and
  * the restore afterwards leaves the chain valid again.
  */
-import { verifyAllChains, verifyTenantChain, type ChainVerificationResult } from '@mcpgateway/audit';
+import {
+  verifyAllChains,
+  verifyTenantChain,
+  type ChainVerificationResult,
+} from '@mcpgateway/audit';
 import { createDatabase } from '@mcpgateway/shared/db';
 import { sql } from 'drizzle-orm';
 
@@ -77,7 +81,9 @@ async function main(): Promise<void> {
       : await verifyAllChains(handle.db);
 
     if (options.json) {
-      console.log(JSON.stringify({ chains: results, allValid: results.every((r) => r.valid) }, null, 2));
+      console.log(
+        JSON.stringify({ chains: results, allValid: results.every((r) => r.valid) }, null, 2),
+      );
     } else {
       console.log(`\n${BOLD}Audit chain verification${RESET}\n`);
       if (results.length === 0) console.log(`  ${DIM}No audit events found.${RESET}`);
@@ -102,7 +108,10 @@ async function runTamperCheck(
   if (seq === null) return;
 
   const target = await handle.db.execute<
-    { id: string; tenant_id: string; latency_ms: number; decision: string } & Record<string, unknown>
+    { id: string; tenant_id: string; latency_ms: number; decision: string } & Record<
+      string,
+      unknown
+    >
   >(sql`SELECT id, tenant_id, latency_ms, decision FROM audit_events WHERE seq = ${seq}`);
 
   const row = target.rows[0];
@@ -116,7 +125,9 @@ async function runTamperCheck(
   console.log(`  Target   row seq ${seq} (${row.id}) in tenant ${row.tenant_id}`);
 
   const before = await verifyTenantChain(handle.db, row.tenant_id);
-  console.log(`  Before   ${before.valid ? GREEN + 'VALID' : RED + 'BROKEN'}${RESET} (${before.rowsChecked} rows)`);
+  console.log(
+    `  Before   ${before.valid ? GREEN + 'VALID' : RED + 'BROKEN'}${RESET} (${before.rowsChecked} rows)`,
+  );
 
   console.log(
     `\n  ${YELLOW}Altering the row.${RESET} ${DIM}This first has to disable the guard trigger, which`,
