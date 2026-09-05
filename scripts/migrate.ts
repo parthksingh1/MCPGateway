@@ -95,7 +95,9 @@ async function applyTo(target: Target): Promise<void> {
 
 export async function runMigrations(options: { controlUrl?: string; warehouseUrl?: string } = {}) {
   const controlUrl =
-    options.controlUrl ?? process.env.DATABASE_URL ?? 'postgres://mcpgw:mcpgw@localhost:5432/mcpgateway';
+    options.controlUrl ??
+    process.env.DATABASE_URL ??
+    'postgres://mcpgw:mcpgw@localhost:5432/mcpgateway';
   const warehouseUrl =
     options.warehouseUrl ??
     process.env.WAREHOUSE_DATABASE_URL ??
