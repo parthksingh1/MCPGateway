@@ -98,9 +98,9 @@ describe('guardStatement', () => {
   });
 
   it('rejects a CTE that performs a write', () => {
-    expect(() =>
-      guard('WITH d AS (DELETE FROM orders RETURNING id) SELECT * FROM d'),
-    ).toThrow(/delete/i);
+    expect(() => guard('WITH d AS (DELETE FROM orders RETURNING id) SELECT * FROM d')).toThrow(
+      /delete/i,
+    );
   });
 
   it('rejects catalog access', () => {
@@ -114,9 +114,7 @@ describe('guardStatement', () => {
   });
 
   it('does not trip on a keyword appearing inside a string literal', () => {
-    expect(() =>
-      guard("SELECT id FROM customers WHERE name = 'Drop Anchor Ltd'"),
-    ).not.toThrow();
+    expect(() => guard("SELECT id FROM customers WHERE name = 'Drop Anchor Ltd'")).not.toThrow();
   });
 
   it('does not trip on a keyword inside a comment', () => {
