@@ -1,4 +1,9 @@
-import { AuditWriter, verifyAllChains, verifyTenantChain, queryAuditEvents } from '@mcpgateway/audit';
+import {
+  AuditWriter,
+  verifyAllChains,
+  verifyTenantChain,
+  queryAuditEvents,
+} from '@mcpgateway/audit';
 import { createDatabase, type DbHandle } from '@mcpgateway/shared/db';
 import { sql } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -171,7 +176,9 @@ describe('audit chain against real Postgres', () => {
 describe('append-only enforcement', () => {
   it('refuses an UPDATE from the audit role', async () => {
     await expect(
-      auditHandle.db.execute(sql`UPDATE audit_events SET latency_ms = 0 WHERE tenant_id = 'acme-corp'`),
+      auditHandle.db.execute(
+        sql`UPDATE audit_events SET latency_ms = 0 WHERE tenant_id = 'acme-corp'`,
+      ),
     ).rejects.toThrow(/permission denied|append-only/i);
   });
 

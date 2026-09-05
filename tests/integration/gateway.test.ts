@@ -69,9 +69,14 @@ afterAll(async () => {
 
 describe('end to end tool dispatch', () => {
   it('routes a CRM call and reports what happened to it', async () => {
-    const { status, body } = await stack.callTool(aliceToken, 'salesforce', 'sf.list_opportunities', {
-      limit: 5,
-    });
+    const { status, body } = await stack.callTool(
+      aliceToken,
+      'salesforce',
+      'sf.list_opportunities',
+      {
+        limit: 5,
+      },
+    );
 
     expect(status).toBe(200);
     expect(body.ok).toBe(true);
@@ -161,9 +166,9 @@ describe('permission mirroring', () => {
 
     const firstMeta = first.body.meta as Record<string, Record<string, unknown>>;
     const secondMeta = second.body.meta as Record<string, Record<string, unknown>>;
-    expect(firstMeta.tokenExchange?.cached === false || secondMeta.tokenExchange?.cached === true).toBe(
-      true,
-    );
+    expect(
+      firstMeta.tokenExchange?.cached === false || secondMeta.tokenExchange?.cached === true,
+    ).toBe(true);
     expect(secondMeta.tokenExchange?.cached).toBe(true);
   });
 
@@ -216,7 +221,7 @@ describe('row-level security in the warehouse', () => {
 
   it('never returns another tenant rows, even when asked for them directly', async () => {
     const { body } = await stack.callTool(danaToken, 'postgres', 'pg.query', {
-      sql: "SELECT DISTINCT tenant_id FROM orders",
+      sql: 'SELECT DISTINCT tenant_id FROM orders',
     });
     const rows = (body.result as { rows: { tenant_id: string }[] }).rows;
     expect(rows.every((row) => row.tenant_id === 'acme-corp')).toBe(true);
@@ -302,7 +307,9 @@ describe('audit trail', () => {
       soql: 'SELECT Email FROM Contact',
     });
 
-    const row = await db.db.execute<{ decision: string; deny_reason: string } & Record<string, unknown>>(
+    const row = await db.db.execute<
+      { decision: string; deny_reason: string } & Record<string, unknown>
+    >(
       sql`
         SELECT decision, deny_reason FROM audit_events
         WHERE tenant_id = 'initech' AND user_id = 'usr_liam'
