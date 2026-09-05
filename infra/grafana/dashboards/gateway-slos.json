@@ -1,0 +1,277 @@
+{
+  "uid": "mcpgw-slos",
+  "title": "Gateway SLOs",
+  "tags": ["mcpgateway"],
+  "timezone": "browser",
+  "editable": true,
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-3h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "tenant",
+        "label": "Tenant",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "query": "label_values(mcpgw_tool_invocations_total, tenant)",
+        "includeAll": true,
+        "multi": false,
+        "current": { "text": "All", "value": "$__all" },
+        "refresh": 2
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "row",
+      "title": "Rate, errors, duration",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Request rate by decision",
+      "description": "Tool invocations per second, split by whether the gateway allowed or refused the call.",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": { "fillOpacity": 12, "lineWidth": 2, "showPoints": "never" },
+          "color": { "mode": "palette-classic" }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "deny" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (decision) (rate(mcpgw_tool_invocations_total{tenant=~\"$tenant\"}[5m]))",
+          "legendFormat": "{{decision}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Deny rate",
+      "description": "Share of calls refused. A sustained rise usually means a policy change or a misconfigured client rather than an attack.",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "max": 1,
+          "min": 0,
+          "custom": { "fillOpacity": 10, "lineWidth": 2, "showPoints": "never" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.1 },
+              { "color": "red", "value": 0.25 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(mcpgw_tool_invocations_total{tenant=~\"$tenant\",decision=\"deny\"}[5m])) / clamp_min(sum(rate(mcpgw_tool_invocations_total{tenant=~\"$tenant\"}[5m])), 0.0001)",
+          "legendFormat": "deny rate"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "End-to-end latency",
+      "description": "Measured at the gateway across the whole enforcement path: verification, rate limit, policy, token exchange, upstream call and audit append.",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 9, "w": 16, "x": 0, "y": 9 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": { "fillOpacity": 0, "lineWidth": 2, "showPoints": "never" }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(mcpgw_tool_duration_milliseconds_bucket{tenant=~\"$tenant\"}[5m])))",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(mcpgw_tool_duration_milliseconds_bucket{tenant=~\"$tenant\"}[5m])))",
+          "legendFormat": "p95"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(mcpgw_tool_duration_milliseconds_bucket{tenant=~\"$tenant\"}[5m])))",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "p99 (5m)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 9 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 500 },
+              { "color": "red", "value": 1000 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": { "graphMode": "area", "colorMode": "value" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(mcpgw_tool_duration_milliseconds_bucket{tenant=~\"$tenant\"}[5m])))"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Calls / sec",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 9 },
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "options": { "graphMode": "area", "colorMode": "none" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(mcpgw_tool_invocations_total{tenant=~\"$tenant\"}[5m]))"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Rate-limited / sec",
+      "description": "Calls refused by a token bucket. Not an error — but a sustained value means a client is being throttled and should be told.",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 5, "w": 8, "x": 16, "y": 13 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": { "graphMode": "area", "colorMode": "value" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(mcpgw_rate_limit_decisions_total{tenant=~\"$tenant\",allowed=\"false\"}[5m]))"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "title": "Where the time goes",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 18 }
+    },
+    {
+      "type": "timeseries",
+      "title": "p95 by stage",
+      "description": "Rate limit, policy, token exchange and the upstream call, side by side. The upstream call and policy evaluation are network round trips; the limiter should be well under a millisecond.",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 19 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": { "fillOpacity": 0, "lineWidth": 2, "showPoints": "never" }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(mcpgw_rate_limit_duration_milliseconds_bucket[5m])))",
+          "legendFormat": "rate limit"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(mcpgw_policy_duration_milliseconds_bucket[5m])))",
+          "legendFormat": "policy"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(mcpgw_token_exchange_duration_milliseconds_bucket[5m])))",
+          "legendFormat": "token exchange"
+        },
+        {
+          "refId": "D",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(mcpgw_upstream_duration_milliseconds_bucket[5m])))",
+          "legendFormat": "upstream"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Traffic by tool",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 19 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": { "fillOpacity": 20, "lineWidth": 1, "showPoints": "never", "stacking": { "mode": "normal" } }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (tool) (rate(mcpgw_tool_invocations_total{tenant=~\"$tenant\"}[5m]))",
+          "legendFormat": "{{tool}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Audit appends",
+      "description": "Every call produces exactly one row. A gap between this and the request rate means rows are being lost, which is a serious fault.",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 27 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": { "fillOpacity": 10, "lineWidth": 2, "showPoints": "never" }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "failed" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (outcome) (rate(mcpgw_audit_writes_total[5m]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ]
+    }
+  ]
+}

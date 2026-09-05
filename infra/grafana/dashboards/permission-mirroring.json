@@ -1,0 +1,224 @@
+{
+  "uid": "mcpgw-mirroring",
+  "title": "Permission mirroring",
+  "tags": ["mcpgateway"],
+  "timezone": "browser",
+  "editable": true,
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-3h", "to": "now" },
+  "panels": [
+    {
+      "type": "text",
+      "title": "",
+      "gridPos": { "h": 3, "w": 24, "x": 0, "y": 0 },
+      "options": {
+        "mode": "markdown",
+        "content": "Every outbound call carries a token minted for the person who made the request, addressed to one downstream service. This dashboard answers the first question anyone asks about that design — **what does it cost** — and the second — **is it actually refusing anything**."
+      }
+    },
+    {
+      "type": "row",
+      "title": "Cost",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 3 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Token exchange latency by cache outcome",
+      "description": "A cache hit is a Redis read. A miss is a full round trip to the identity provider. The gap between them is the reason the cache exists.",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 14, "x": 0, "y": 4 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": { "fillOpacity": 0, "lineWidth": 2, "showPoints": "never" }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le, cached) (rate(mcpgw_token_exchange_duration_milliseconds_bucket[5m])))",
+          "legendFormat": "p95 cached={{cached}}"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.50, sum by (le, cached) (rate(mcpgw_token_exchange_duration_milliseconds_bucket[5m])))",
+          "legendFormat": "p50 cached={{cached}}"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Cache hit rate",
+      "description": "Should sit near 100% in steady state. A low value means tokens are being evicted before reuse — check the configured maximum TTL against the token lifetime.",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 5, "x": 14, "y": 4 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "max": 1,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 0.7 },
+              { "color": "green", "value": 0.9 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": { "graphMode": "area", "colorMode": "value" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(mcpgw_token_exchange_total{cached=\"true\"}[5m])) / clamp_min(sum(rate(mcpgw_token_exchange_total[5m])), 0.0001)"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Exchange failures / sec",
+      "description": "Every one of these refused a request. There is no service-account fallback, so a sustained value means callers are being turned away.",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 5, "x": 19, "y": 4 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 0.01 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": { "graphMode": "area", "colorMode": "value" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(mcpgw_token_exchange_total{outcome=~\"error|subject_mismatch\"}[5m]))"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Exchanges by outcome",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 10, "x": 14, "y": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": { "fillOpacity": 20, "lineWidth": 1, "showPoints": "never", "stacking": { "mode": "normal" } }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byRegexp", "options": "error|subject_mismatch" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (outcome) (rate(mcpgw_token_exchange_total[5m]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Exchanges by audience",
+      "description": "One series per downstream service. A token minted for the CRM cannot be used against the warehouse, which is why these are separate.",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 12 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": { "fillOpacity": 20, "lineWidth": 1, "showPoints": "never", "stacking": { "mode": "normal" } }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (audience) (rate(mcpgw_token_exchange_total[5m]))",
+          "legendFormat": "{{audience}}"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "title": "Decisions",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 19 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Policy denials by rule",
+      "description": "Which rules are actually firing. A rule that never fires is either dead or the thing it guards never happens — both worth knowing.",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": { "fillOpacity": 20, "lineWidth": 1, "showPoints": "never", "stacking": { "mode": "normal" } }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (rule) (rate(mcpgw_policy_decisions_total{effect=\"deny\"}[5m]))",
+          "legendFormat": "{{rule}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Denials by tenant",
+      "description": "Restricted-plan tenants are expected to sit higher. An enterprise tenant climbing here usually means a client is misconfigured.",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": { "fillOpacity": 20, "lineWidth": 1, "showPoints": "never", "stacking": { "mode": "normal" } }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (tenant) (rate(mcpgw_policy_decisions_total{effect=\"deny\"}[5m]))",
+          "legendFormat": "{{tenant}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Rate-limit refusals by scope",
+      "description": "user_tool means one caller hit their own bucket. tenant means the organisation is at its contracted capacity, which affects everyone in it.",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 28 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": { "fillOpacity": 20, "lineWidth": 1, "showPoints": "never" }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (scope, tenant) (rate(mcpgw_rate_limit_decisions_total{allowed=\"false\"}[5m]))",
+          "legendFormat": "{{tenant}} · {{scope}}"
+        }
+      ]
+    }
+  ]
+}
