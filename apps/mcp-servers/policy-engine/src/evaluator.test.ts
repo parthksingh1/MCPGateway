@@ -2,7 +2,12 @@ import { beforeAll, describe, expect, it } from 'vitest';
 
 import { evaluate, evaluateCondition, readPath } from './evaluator.js';
 import { loadPolicies } from './loader.js';
-import { bundleSchema, evaluationInputSchema, type Bundle, type EvaluationInput } from './schema.js';
+import {
+  bundleSchema,
+  evaluationInputSchema,
+  type Bundle,
+  type EvaluationInput,
+} from './schema.js';
 
 let baseline: Bundle;
 
@@ -61,7 +66,11 @@ describe('operators', () => {
     ['exists', { path: 'arguments.limit', op: 'exists' }, true],
     ['missing', { path: 'arguments.absent', op: 'missing' }, true],
     ['contains', { path: 'principal.scopes', op: 'contains', value: 'salesforce:read' }, true],
-    ['not_contains', { path: 'principal.scopes', op: 'not_contains', value: 'salesforce:write' }, true],
+    [
+      'not_contains',
+      { path: 'principal.scopes', op: 'not_contains', value: 'salesforce:write' },
+      true,
+    ],
     ['contains_any', { path: 'arguments.fields', op: 'contains_any', value: ['email'] }, true],
     ['starts_with', { path: 'tool', op: 'starts_with', value: 'sf.' }, true],
     ['eq_field', { path: 'principal.tenantId', op: 'eq_field', value: 'tenant.id' }, true],
@@ -75,9 +84,7 @@ describe('operators', () => {
   }
 
   it('treats a gt against a non-numeric value as no match rather than an error', () => {
-    expect(
-      evaluateCondition({ path: 'tool', op: 'gt', value: 5 } as never, input),
-    ).toBe(false);
+    expect(evaluateCondition({ path: 'tool', op: 'gt', value: 5 } as never, input)).toBe(false);
   });
 
   it('treats a malformed regular expression as no match', () => {
@@ -111,13 +118,23 @@ describe('combinators', () => {
   it('all requires every child', () => {
     expect(
       evaluateCondition(
-        { all: [{ path: 'tool', op: 'eq', value: 'sf.query' }, { path: 'principal.role', op: 'eq', value: 'analyst' }] } as never,
+        {
+          all: [
+            { path: 'tool', op: 'eq', value: 'sf.query' },
+            { path: 'principal.role', op: 'eq', value: 'analyst' },
+          ],
+        } as never,
         input,
       ),
     ).toBe(true);
     expect(
       evaluateCondition(
-        { all: [{ path: 'tool', op: 'eq', value: 'sf.query' }, { path: 'principal.role', op: 'eq', value: 'admin' }] } as never,
+        {
+          all: [
+            { path: 'tool', op: 'eq', value: 'sf.query' },
+            { path: 'principal.role', op: 'eq', value: 'admin' },
+          ],
+        } as never,
         input,
       ),
     ).toBe(false);
@@ -126,7 +143,12 @@ describe('combinators', () => {
   it('any requires one child', () => {
     expect(
       evaluateCondition(
-        { any: [{ path: 'principal.role', op: 'eq', value: 'admin' }, { path: 'tool', op: 'eq', value: 'sf.query' }] } as never,
+        {
+          any: [
+            { path: 'principal.role', op: 'eq', value: 'admin' },
+            { path: 'tool', op: 'eq', value: 'sf.query' },
+          ],
+        } as never,
         input,
       ),
     ).toBe(true);
@@ -243,12 +265,14 @@ describe('baseline bundle', () => {
   it('denies warehouse queries for viewers but not schema inspection', () => {
     const viewer = { ...request().principal, role: 'viewer' };
     expect(
-      evaluate(baseline, request({ tool: 'pg.query', principal: viewer, arguments: { sql: 'SELECT 1' } }))
-        .decision,
+      evaluate(
+        baseline,
+        request({ tool: 'pg.query', principal: viewer, arguments: { sql: 'SELECT 1' } }),
+      ).decision,
     ).toBe('deny');
-    expect(evaluate(baseline, request({ tool: 'pg.list_tables', principal: viewer })).decision).toBe(
-      'allow',
-    );
+    expect(
+      evaluate(baseline, request({ tool: 'pg.list_tables', principal: viewer })).decision,
+    ).toBe('allow');
   });
 
   it('attaches a burst tier for enterprise tenants without deciding the request', () => {
