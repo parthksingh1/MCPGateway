@@ -201,12 +201,15 @@ export async function createMcpService(options: McpServiceOptions): Promise<McpS
   // Stateless mode has no stream to resume and no session to delete.
   for (const method of ['get', 'delete'] as const) {
     app[method]('/mcp', async (_request, reply) =>
-      reply.code(405).header('allow', 'POST').send({
-        error: {
-          code: 'method_not_allowed',
-          message: 'This server runs the Streamable HTTP transport in stateless mode.',
-        },
-      }),
+      reply
+        .code(405)
+        .header('allow', 'POST')
+        .send({
+          error: {
+            code: 'method_not_allowed',
+            message: 'This server runs the Streamable HTTP transport in stateless mode.',
+          },
+        }),
     );
   }
 
@@ -289,8 +292,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function toPrincipal(claims: JWTPayload & Record<string, unknown>): DownstreamPrincipal {
   const roleResult = roleSchema.safeParse(claims.role);
-  const actor =
-    isRecord(claims.act) && typeof claims.act.sub === 'string' ? claims.act.sub : null;
+  const actor = isRecord(claims.act) && typeof claims.act.sub === 'string' ? claims.act.sub : null;
 
   return {
     subject: String(claims.sub ?? ''),
