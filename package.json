@@ -30,7 +30,8 @@
     "oauth:walkthrough": "tsx scripts/demo-oauth-flow.ts",
     "bench": "tsx scripts/load-test.ts",
     "load-test:local": "tsx scripts/load-test.ts",
-    "prepare": "husky || exit 0"
+    "prepare": "husky || exit 0",
+    "screenshots": "tsx scripts/capture-screenshots.ts"
   },
   "devDependencies": {
     "@mcpgateway/audit": "workspace:^",
