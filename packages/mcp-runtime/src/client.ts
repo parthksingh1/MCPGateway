@@ -6,8 +6,8 @@ import {
   annotate,
   GatewayAttr,
 } from '@mcpgateway/telemetry';
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+
+import { UpstreamClientPool } from './client-pool.js';
 
 export interface UpstreamToolCall {
   /** Streamable HTTP endpoint of the target MCP server. */
@@ -33,13 +33,29 @@ interface ContentBlock {
 }
 
 /**
+ * Process-wide pool. Connections are per destination and are handed out
+ * exclusively for the duration of a call — see client-pool.ts for why that is
+ * what makes pooling safe when the credential differs per caller.
+ */
+const pool = new UpstreamClientPool();
+
+/** Idle pooled connections per destination. Surfaced by readiness checks. */
+export function upstreamPoolStats(): Record<string, number> {
+  return pool.stats();
+}
+
+export async function closeUpstreamPool(): Promise<void> {
+  await pool.close();
+}
+
+/**
  * Calls one tool on an upstream MCP server.
  *
- * A client is created per call rather than pooled. The Authorization header is
- * fixed at transport construction, and the token differs for every caller, so a
- * pooled client would either have to mutate shared state or risk sending one
- * user's token on another user's request. Connection reuse is handled a layer
- * down by the HTTP agent, which is where it belongs.
+ * The connection is taken from a pool, because the MCP `initialize` handshake
+ * costs roughly four times the call itself and the gateway makes two upstream
+ * calls per request. The per-caller token is applied at request time rather
+ * than captured when the transport was built, and an entry is never shared
+ * concurrently.
  *
  * `traceparent` is injected explicitly rather than relying solely on
  * auto-instrumentation, so propagation still holds if the SDK is disabled.
@@ -56,35 +72,30 @@ export async function callUpstreamTool(call: UpstreamToolCall): Promise<Upstream
       authorization: `Bearer ${call.accessToken}`,
     });
 
-    const transport = new StreamableHTTPClientTransport(new URL(call.url), {
-      requestInit: { headers },
-    });
-    const client = new Client({ name: 'mcpgateway', version: '0.1.0' }, { capabilities: {} });
-
     try {
-      await client.connect(transport);
+      return await pool.withClient(call.url, headers, async ({ client }) => {
+        const result = await client.callTool(
+          { name: call.toolName, arguments: call.arguments },
+          undefined,
+          { timeout: call.timeoutMs ?? 15_000 },
+        );
 
-      const result = await client.callTool(
-        { name: call.toolName, arguments: call.arguments },
-        undefined,
-        { timeout: call.timeoutMs ?? 15_000 },
-      );
+        const latencyMs = performance.now() - startedAt;
+        upstreamLatency.record(latencyMs, { server: call.server, tool: call.toolName });
 
-      const latencyMs = performance.now() - startedAt;
-      upstreamLatency.record(latencyMs, { server: call.server, tool: call.toolName });
+        const blocks = Array.isArray(result.content) ? (result.content as ContentBlock[]) : [];
+        const text = blocks
+          .filter((block) => block.type === 'text' && typeof block.text === 'string')
+          .map((block) => block.text)
+          .join('\n');
 
-      const blocks = Array.isArray(result.content) ? (result.content as ContentBlock[]) : [];
-      const text = blocks
-        .filter((block) => block.type === 'text' && typeof block.text === 'string')
-        .map((block) => block.text)
-        .join('\n');
-
-      return {
-        isError: result.isError === true,
-        text,
-        structured: isRecord(result.structuredContent) ? result.structuredContent : null,
-        latencyMs,
-      };
+        return {
+          isError: result.isError === true,
+          text,
+          structured: isRecord(result.structuredContent) ? result.structuredContent : null,
+          latencyMs,
+        };
+      });
     } catch (error) {
       const latencyMs = performance.now() - startedAt;
       upstreamLatency.record(latencyMs, { server: call.server, tool: call.toolName, error: true });
@@ -97,9 +108,6 @@ export async function callUpstreamTool(call: UpstreamToolCall): Promise<Upstream
         error instanceof Error ? error.message : 'Upstream tool call failed',
         { tool: call.toolName },
       );
-    } finally {
-      await client.close().catch(() => undefined);
-      await transport.close().catch(() => undefined);
     }
   });
 }
