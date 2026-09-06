@@ -2,7 +2,9 @@ name: ci
 
 on:
   push:
-    branches: [main]
+    # Both, because the default branch differs between clones of this project
+    # and a workflow that never fires is worse than one that fires twice.
+    branches: [main, master]
   pull_request:
   workflow_dispatch:
 
@@ -86,6 +88,11 @@ jobs:
           --health-interval 5s --health-timeout 5s --health-retries 20
     env:
       DATABASE_URL: postgres://mcpgw:mcpgw@localhost:5432/mcpgateway
+      # The service container provides one database. Row-level security is per
+      # table, not per database, so pointing the warehouse at the same one
+      # changes nothing the tests assert on.
+      WAREHOUSE_DATABASE_URL: postgres://mcpgw:mcpgw@localhost:5432/mcpgateway
+      AUDIT_DATABASE_URL: postgres://mcpgw_audit:mcpgw_audit@localhost:5432/mcpgateway
       REDIS_URL: redis://localhost:6379
       USE_EXTERNAL_SERVICES: 'true'
     steps:

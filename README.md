@@ -4,13 +4,13 @@
 carries the identity of the person who made it — not a shared service account — and arrives with
 rate limits, policy, a tamper-evident audit trail and a distributed trace already applied.
 
-[![ci](https://github.com/USER/mcpgateway/actions/workflows/ci.yml/badge.svg)](https://github.com/USER/mcpgateway/actions/workflows/ci.yml)
+[![ci](https://github.com/parthksingh1/MCPGateway/actions/workflows/ci.yml/badge.svg)](https://github.com/parthksingh1/MCPGateway/actions/workflows/ci.yml)
 ![node](https://img.shields.io/badge/node-20_LTS-3c873a)
 ![typescript](https://img.shields.io/badge/typescript-strict-3178c6)
 ![license](https://img.shields.io/badge/license-MIT-blue)
 
 ```bash
-git clone https://github.com/USER/mcpgateway && cd mcpgateway
+git clone https://github.com/parthksingh1/MCPGateway && cd MCPGateway
 make demo          # console on :3000, traces on :16686, dashboards on :3001
 ```
 
