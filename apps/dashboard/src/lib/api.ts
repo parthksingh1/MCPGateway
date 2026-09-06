@@ -76,6 +76,9 @@ export const api = {
 
   overview: (range: string) => request<Overview>(`/api/overview?range=${range}`),
 
+  /** Unauthenticated: used by the sidebar's dependency panel. */
+  readiness: () => request<Readiness>('/readyz'),
+
   audit: (params: AuditParams) => {
     const query = new URLSearchParams();
     for (const [key, value] of Object.entries(params)) {
@@ -112,6 +115,15 @@ export const api = {
 };
 
 // ------------------------------------------------------------------ types
+
+export type HealthState = 'ok' | 'degraded' | 'down';
+
+export interface Readiness {
+  ready: boolean;
+  checks: Record<string, HealthState>;
+  jwks: { keys: number; hits: number; misses: number; fetches: number };
+  upstreamPool?: Record<string, number>;
+}
 
 export interface Overview {
   range: string;
