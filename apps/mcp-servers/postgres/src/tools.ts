@@ -22,7 +22,7 @@ export function createWarehouseTools(warehouse: Warehouse): ToolDefinition<any>[
     name: 'pg.list_tables',
     title: 'List warehouse tables',
     description:
-      'Lists the warehouse tables available to the caller, with the number of rows each one exposes to them under row-level security.',
+      'Lists the warehouse tables available to the caller, with how many rows each exposes to them under row-level security. Counts are capped so the listing stays fast on large tables; each entry reports whether its count is exact.',
     inputSchema: {},
     requiredScopes: ['postgres:read'],
     readOnly: true,
