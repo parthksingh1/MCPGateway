@@ -1,5 +1,8 @@
-# syntax=docker/dockerfile:1.7
 # Build context is the repository root so workspace links resolve.
+#
+# No `# syntax=` directive: pinning an external frontend means every build first
+# pulls an image from Docker Hub, which turns a network blip into a build
+# failure. Modern BuildKit supports RUN --mount natively.
 
 FROM node:20-slim AS base
 ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH CI=true HUSKY=0
