@@ -58,6 +58,9 @@ jobs:
           node-version: '20'
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # Internal packages are consumed through their built output, so the tests
+      # cannot resolve a single one of them without this.
+      - run: pnpm build
       - run: pnpm test:coverage
       - uses: actions/upload-artifact@v4
         if: always()
@@ -104,6 +107,7 @@ jobs:
           node-version: '20'
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm build
       - run: pnpm db:migrate
       - run: pnpm test:integration
 
