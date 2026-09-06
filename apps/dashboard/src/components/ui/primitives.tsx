@@ -250,3 +250,141 @@ export function Code({ className, ...props }: HTMLAttributes<HTMLElement>) {
     />
   );
 }
+
+// ------------------------------------------------------------------ status
+
+const STATUS_COLOR: Record<string, string> = {
+  ok: 'bg-allow',
+  degraded: 'bg-warn',
+  down: 'bg-deny',
+  unknown: 'bg-line-strong',
+};
+
+/** Small state indicator. Pulses only while healthy, so it reads as "live". */
+export function StatusDot({ state, pulse }: { state: string; pulse?: boolean }) {
+  return (
+    <span className="relative inline-flex h-1.5 w-1.5 shrink-0">
+      {pulse && state === 'ok' ? (
+        <span
+          className={cn(
+            'absolute inline-flex h-full w-full animate-ping rounded-full opacity-60',
+            STATUS_COLOR[state] ?? STATUS_COLOR.unknown,
+          )}
+        />
+      ) : null}
+      <span
+        className={cn(
+          'relative inline-flex h-1.5 w-1.5 rounded-full',
+          STATUS_COLOR[state] ?? STATUS_COLOR.unknown,
+        )}
+      />
+    </span>
+  );
+}
+
+/** Uppercase group heading used in the sidebar and in dense panels. */
+export function SectionLabel({ className, ...props }: HTMLAttributes<HTMLParagraphElement>) {
+  return (
+    <p
+      className={cn(
+        'px-2.5 pb-1.5 pt-3 text-[10px] font-semibold uppercase tracking-[0.09em] text-content-subtle',
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+/**
+ * Inline trend line. Deliberately axis-free and unlabelled: it exists to show
+ * shape next to a number, and anything more would compete with the real charts.
+ */
+export function Sparkline({
+  values,
+  className,
+  tone = 'accent',
+}: {
+  values: number[];
+  className?: string;
+  tone?: 'accent' | 'deny' | 'warn';
+}) {
+  if (values.length < 2) return <div className={cn('h-6', className)} />;
+
+  const max = Math.max(...values);
+  const min = Math.min(...values);
+  const span = max - min || 1;
+  const width = 100;
+  const height = 24;
+
+  const points = values.map((value, index) => {
+    const x = (index / (values.length - 1)) * width;
+    const y = height - ((value - min) / span) * (height - 3) - 1.5;
+    return `${x.toFixed(2)},${y.toFixed(2)}`;
+  });
+
+  const stroke = tone === 'deny' ? '#e5544b' : tone === 'warn' ? '#d9a441' : '#4a8fe7';
+  const id = `spark-${tone}`;
+
+  return (
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      preserveAspectRatio="none"
+      className={cn('h-6 w-full', className)}
+      aria-hidden="true"
+    >
+      <defs>
+        <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={stroke} stopOpacity="0.22" />
+          <stop offset="100%" stopColor={stroke} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <polygon points={`0,${height} ${points.join(' ')} ${width},${height}`} fill={`url(#${id})`} />
+      <polyline
+        points={points.join(' ')}
+        fill="none"
+        stroke={stroke}
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+        vectorEffect="non-scaling-stroke"
+      />
+    </svg>
+  );
+}
+
+/** Horizontal proportion bar, used for rankings. */
+export function MeterBar({
+  value,
+  max,
+  tone = 'accent',
+}: {
+  value: number;
+  max: number;
+  tone?: 'accent' | 'deny' | 'warn' | 'allow';
+}) {
+  const fill =
+    tone === 'deny'
+      ? 'bg-deny/70'
+      : tone === 'warn'
+        ? 'bg-warn/70'
+        : tone === 'allow'
+          ? 'bg-allow/70'
+          : 'bg-accent/70';
+  return (
+    <div className="h-1 overflow-hidden rounded-full bg-surface-raised">
+      <div
+        className={cn('h-full rounded-full transition-all duration-500', fill)}
+        style={{ width: `${Math.max(2, (value / Math.max(1, max)) * 100)}%` }}
+      />
+    </div>
+  );
+}
+
+/** Keyboard hint, for affordances that have a shortcut. */
+export function Kbd({ children }: { children: ReactNode }) {
+  return (
+    <kbd className="rounded border border-line bg-surface-raised px-1 py-px font-mono text-[10px] text-content-subtle">
+      {children}
+    </kbd>
+  );
+}
