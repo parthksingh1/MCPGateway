@@ -1,5 +1,8 @@
-# syntax=docker/dockerfile:1.7
 # Build context is the repository root so workspace links resolve.
+#
+# No `# syntax=` directive: pinning an external frontend means every build first
+# pulls an image from Docker Hub, which turns a network blip into a build
+# failure. Modern BuildKit supports RUN --mount natively.
 
 FROM node:20-slim AS base
 ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH CI=true HUSKY=0
@@ -20,9 +23,12 @@ RUN pnpm --filter @mcpgateway/identity... build
 
 FROM base AS runtime
 ENV NODE_ENV=production
+# The built workspace is copied wholesale rather than reinstalled. A second
+# `pnpm install --prod` in this stage would reach the registry at image-build
+# time — slower, and a network blip fails the build for no correctness benefit.
+# Trimming dev dependencies here is a size optimisation and would be done with
+# `pnpm deploy`, not another install.
 COPY --from=build /app /app
-# Prune dev dependencies after building rather than installing twice.
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --prod   && pnpm store prune
 
 WORKDIR /app/apps/mock-idp
 USER node
