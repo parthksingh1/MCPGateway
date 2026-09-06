@@ -126,10 +126,77 @@ only honest way to find out is to run it there.
 
 ---
 
-### Run 2
+### Run 2 — after pooling upstream MCP connections
 
-<!-- Copy the block above. Comparing a change against a baseline on the same machine is far more
-     informative than a single absolute number. -->
+Same machine, same method, same commit-to-commit comparison. The only change is that the gateway
+now takes upstream MCP connections from a pool instead of building one per call.
+
+|                      |                                                              |
+| -------------------- | ------------------------------------------------------------ |
+| Date                 | 2026-09-06                                                   |
+| Commit               | `838c605` + the connection pool                              |
+| Machine              | Intel i5-10300H @ 2.50 GHz, 8 logical cores, 8 GB RAM        |
+| OS                   | Windows 11                                                   |
+| Docker               | Docker Desktop 28.1.1 (WSL2 backend)                         |
+| Node                 | v24.15.0 (load generator); images run Node 20                |
+| Deployment           | all 14 containers plus the load generator on the one machine |
+| Tool exercised       | `salesforce` / `sf.list_opportunities`                       |
+| Rate limit in effect | 600/min per user (enterprise plan) — not reached             |
+
+**Serial latency — 1 connection, 8 s**
+
+| min   | p50   | p99   | mean  | requests/sec |
+| ----- | ----- | ----- | ----- | ------------ |
+| 22.81 | 39.07 | 306.1 | 51.68 | 19.3         |
+
+**Under concurrency — 20 connections, 10 s**
+
+| min    | p50    | p75    | p90     | p95     | p99     | max     | mean   |
+| ------ | ------ | ------ | ------- | ------- | ------- | ------- | ------ |
+| 248.91 | 593.07 | 991.17 | 1836.49 | 3173.35 | 3570.18 | 3851.33 | 933.23 |
+
+| requests | requests/sec | 200 | 429 | other |
+| -------- | ------------ | --- | --- | ----- |
+| 222      | 20.8         | 222 | 0   | 0     |
+
+**Against Run 1**
+
+|                        | Run 1 | Run 2 | change |
+| ---------------------- | ----- | ----- | ------ |
+| p50, 1 connection      | 78.5  | 39.1  | −50 %  |
+| mean, 1 connection     | 92.2  | 51.7  | −44 %  |
+| requests/sec, 1 conn   | 10.8  | 19.3  | +79 %  |
+| p50, 20 connections    | 3167  | 593   | −81 %  |
+| requests/sec, 20 conns | 6.0   | 20.8  | ×3.5   |
+
+**Notes**
+
+Run 1 named two candidate causes for throughput falling as concurrency rose. Measuring rather than
+guessing settled it. Timing the layers separately showed `/api/overview` — which authenticates and
+queries Postgres but makes no MCP call — at 10 ms p50, while a tool call was 170 ms. That put
+roughly 160 ms in the two upstream MCP calls, not in the audit lock.
+
+Timing the MCP client directly localised it further:
+
+|                                             | p50     |
+| ------------------------------------------- | ------- |
+| `healthz` on the MCP server (network floor) | 4.5 ms  |
+| `connect` + `callTool` + `close`            | 64.1 ms |
+| `callTool` alone, connection reused         | 12.1 ms |
+
+So about 52 of every 64 ms was the `initialize` handshake and transport setup, and the gateway paid
+it twice per request. Pooling the connections removed it.
+
+**The audit chain-head lock was not the bottleneck** on this hardware, which Run 1 could not have
+told you. It remains a real serialisation point that a much higher-throughput single-tenant
+deployment would eventually meet, and `AUDIT_LOG.md` still describes the sharding answer — but it is
+not what these numbers were measuring.
+
+What is left is genuine saturation rather than serialisation: throughput now rises with concurrency
+(19.3 → 20.8 req/s) instead of falling, and the p95/p99 spread at 20 connections is eight cores
+running fourteen containers, two databases and the load generator at once. A deployment with the
+databases on their own hardware and several gateway replicas would look different, and the only
+honest way to find out is to run it there.
 
 ---
 
@@ -138,11 +205,11 @@ only honest way to find out is to run it there.
 Some things worth checking against your own numbers rather than taking on faith:
 
 **p50 against p99, and throughput against concurrency.** If throughput falls as connections rise,
-something is serialising. The first thing to test is the audit chain-head lock: run the same load
-split across `acme-corp`, `globex` and `initech`, which contend on three different locks instead of
-one. If throughput improves roughly threefold, that is the lock, and `AUDIT_LOG.md` describes the
-sharding answer. If it does not, the cost is elsewhere — take a single trace in Jaeger and look at
-where the wall-clock time actually sits.
+something is serialising. Resist guessing which thing: Run 1 assumed the audit chain-head lock and
+was wrong. Time the layers separately first — `/healthz`, then `/api/overview` (authentication and
+Postgres, no MCP), then a tool call — and the gap tells you which layer to open in Jaeger. Only
+then test a specific hypothesis, such as splitting load across the three tenants so audit appends
+contend on three locks instead of one.
 
 **Cached against uncached exchange.** The Permission Mirroring dashboard splits token exchange
 latency by cache outcome. If the hit rate is not near 100 % during a steady-state run, something is
