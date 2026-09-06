@@ -299,3 +299,61 @@ describe('TokenExchangeService', () => {
     expect(cache.entries.size).toBe(1);
   });
 });
+
+describe('TokenExchangeService issuer isolation', () => {
+  it('does not serve a token cached under a different issuer', async () => {
+    const key = await createTestKey();
+    const cache = new MemoryCache();
+    const client = new OAuthClient({
+      issuer: ISSUER,
+      clientId: 'mcp-gateway',
+      clientSecret: 'shh',
+      fetchImpl: (async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (!url.endsWith('/token')) return discovery();
+        const token = await key.sign(
+          { scope: 'salesforce:read' },
+          { issuer: ISSUER, subject: principal.subject, audience: 'mcp:salesforce' },
+        );
+        return new Response(
+          JSON.stringify({ access_token: token, token_type: 'Bearer', expires_in: 300 }),
+          { status: 200, headers: { 'content-type': 'application/json' } },
+        );
+      }) as unknown as typeof fetch,
+    });
+
+    const first = new TokenExchangeService({ client, cache, issuer: 'https://provider-a.test' });
+    const second = new TokenExchangeService({ client, cache, issuer: 'https://provider-b.test' });
+
+    const args = {
+      principal,
+      subjectToken: 'caller-token',
+      audience: 'mcp:salesforce',
+      scopes: ['salesforce:read'],
+    };
+
+    await first.mint(args);
+    const fromOther = await second.mint(args);
+
+    // Same subject, audience and scopes — the entry would be a hit without the
+    // issuer in the key, and the token it returned would be signed by keys the
+    // second provider's downstream services do not trust.
+    expect(fromOther.cached).toBe(false);
+    expect(first.cacheKey('usr_alice', 'mcp:salesforce', ['salesforce:read'])).not.toBe(
+      second.cacheKey('usr_alice', 'mcp:salesforce', ['salesforce:read']),
+    );
+  });
+
+  it('still reuses an entry for the same issuer', async () => {
+    const key = await createTestKey();
+    const harness = await createHarness(key);
+    const args = {
+      principal,
+      subjectToken: 'caller-token',
+      audience: 'mcp:salesforce',
+      scopes: ['salesforce:read'],
+    };
+    await harness.service.mint(args);
+    expect((await harness.service.mint(args)).cached).toBe(true);
+  });
+});

@@ -1,6 +1,7 @@
 import {
   PermissionMirrorError,
   scopeDigest,
+  sha256Hex,
   type Principal,
   isGatewayError,
 } from '@mcpgateway/shared';
@@ -34,6 +35,13 @@ export interface MirroredToken {
 export interface TokenExchangeOptions {
   readonly client: OAuthClient;
   readonly cache: TokenCacheStore;
+  /**
+   * Issuer these tokens are minted by. Folded into the cache key so that
+   * repointing the gateway at a different provider cannot serve tokens the new
+   * provider's downstream services will refuse — the subject, audience and
+   * scopes would otherwise be identical and the stale entry would be a hit.
+   */
+  readonly issuer?: string;
   /** Upper bound on how long an exchanged token may be reused. */
   readonly maxTtlSeconds?: number;
   /** Refresh this many seconds before expiry so a cached token never lands expired. */
@@ -75,7 +83,10 @@ export class TokenExchangeService {
     this.cache = options.cache;
     this.maxTtlSeconds = options.maxTtlSeconds ?? 300;
     this.earlyRefreshSeconds = options.earlyRefreshSeconds ?? 10;
-    this.keyPrefix = options.keyPrefix ?? 'tex';
+    // A short digest rather than the issuer itself: the key stays compact and
+    // does not carry a URL into every Redis key name.
+    const issuerTag = options.issuer ? `:${sha256Hex(options.issuer).slice(0, 8)}` : '';
+    this.keyPrefix = `${options.keyPrefix ?? 'tex'}${issuerTag}`;
   }
 
   cacheKey(subject: string, audience: string, scopes: readonly string[]): string {

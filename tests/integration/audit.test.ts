@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import {
   AuditWriter,
   verifyAllChains,
@@ -11,6 +13,16 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { runMigrations } from '../../scripts/migrate.js';
 
 import { startPostgres } from './helpers/services.js';
+
+/**
+ * Tenants created by this file are suffixed per run.
+ *
+ * Several tests here deliberately break a chain and leave it broken — that is
+ * the thing under test. Reusing fixed ids meant the second run against the same
+ * database inherited the first run's damage and failed on setup. CI gets a
+ * fresh container each time and never saw it; a developer running twice did.
+ */
+const RUN = randomUUID().slice(0, 8);
 
 let handle: DbHandle;
 let auditHandle: DbHandle;
@@ -48,7 +60,11 @@ afterAll(async () => {
   await stopPostgres?.();
 });
 
+/** Tenants this run has appended to, for the all-chains assertion. */
+const TENANTS_APPENDED = new Set<string>();
+
 async function append(tenantId: string, overrides: Record<string, unknown> = {}) {
+  TENANTS_APPENDED.add(tenantId);
   return writer.append({
     tenantId,
     userId: 'usr_alice',
@@ -99,7 +115,16 @@ describe('audit chain against real Postgres', () => {
   });
 
   it('keeps a well-formed chain under 200 concurrent appends', async () => {
-    const tenantId = 'globex';
+    // Its own tenant, because this asserts an exact row count and the suite
+    // does not always get a private database: with USE_EXTERNAL_SERVICES the
+    // three integration files share one, so a tenant another file seeds would
+    // silently inflate the count here.
+    const tenantId = `concurrency-${randomUUID().slice(0, 8)}`;
+    await handle.db.execute(sql`
+      INSERT INTO tenants (id, name, plan) VALUES (${tenantId}, 'Concurrency', 'pro')
+      ON CONFLICT (id) DO NOTHING
+    `);
+
     await Promise.all(Array.from({ length: 200 }, () => append(tenantId)));
 
     const result = await verifyTenantChain(handle.db, tenantId);
@@ -112,11 +137,17 @@ describe('audit chain against real Postgres', () => {
   it('verifies every tenant chain', async () => {
     const results = await verifyAllChains(handle.db);
     expect(results.length).toBeGreaterThanOrEqual(2);
-    expect(results.every((r) => r.valid)).toBe(true);
+
+    // Only the chains this run appended to. Other tenants in the database may
+    // have been deliberately broken by an earlier run of the tamper tests, and
+    // asserting over them would be asserting on somebody else's fixture.
+    const ours = results.filter((result) => TENANTS_APPENDED.has(result.tenantId));
+    expect(ours.length).toBeGreaterThanOrEqual(2);
+    expect(ours.every((result) => result.valid)).toBe(true);
   });
 
   it('detects a tampered row and names it', async () => {
-    const tenantId = 'tamper-test';
+    const tenantId = `tamper-${RUN}`;
     await handle.db.execute(sql`
       INSERT INTO tenants (id, name, plan) VALUES (${tenantId}, 'Tamper Test', 'pro')
       ON CONFLICT (id) DO NOTHING
@@ -147,7 +178,7 @@ describe('audit chain against real Postgres', () => {
   });
 
   it('detects rows deleted from the tail', async () => {
-    const tenantId = 'truncate-test';
+    const tenantId = `truncate-${RUN}`;
     await handle.db.execute(sql`
       INSERT INTO tenants (id, name, plan) VALUES (${tenantId}, 'Truncate Test', 'pro')
       ON CONFLICT (id) DO NOTHING

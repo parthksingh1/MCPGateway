@@ -75,6 +75,7 @@ export async function createServices(config: GatewayConfig): Promise<GatewayServ
   const tokenExchange = new TokenExchangeService({
     client: oauth,
     cache: redis,
+    issuer: config.OIDC_ISSUER,
     maxTtlSeconds: config.TOKEN_EXCHANGE_CACHE_MAX_TTL_SECONDS,
   });
 
