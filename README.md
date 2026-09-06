@@ -14,6 +14,11 @@ git clone https://github.com/USER/mcpgateway && cd mcpgateway
 make demo          # console on :3000, traces on :16686, dashboards on :3001
 ```
 
+![The operations console overview](docs/diagrams/console-overview.png)
+
+<sub>The console after `make demo` — traffic, latency percentiles and tool volume, all read from the
+audit trail rather than a metrics estimate.</sub>
+
 ---
 
 ## The problem
@@ -343,6 +348,63 @@ Every substitution is labelled `// MOCK:` in the source and listed here. Nothing
 
 ---
 
+## The console
+
+Seven pages. Everything below is a screenshot of the running application, captured by
+`pnpm screenshots`, which drives a real browser against the stack `make demo` starts.
+
+### Live requests
+
+![Live request stream](docs/diagrams/console-live.png)
+
+A server-sent-event stream of every call as it lands. Expanding a row shows what actually happened
+to it: the downstream token's subject and audience, whether it was minted or served from cache, the
+policy rule that decided, remaining rate-limit tokens, and a link to the trace.
+
+### Audit log
+
+![Audit log with chain verification](docs/diagrams/console-audit.png)
+
+Filterable, and **Verify chain** recomputes every hash from the tenant's genesis value rather than
+reading a stored flag. Expanding a row shows its position in the chain — the previous hash, its own,
+and the argument digest.
+
+### Policies
+
+![Policy explorer](docs/diagrams/console-policies.png)
+
+The loaded rules in evaluation order, and a form that runs the real evaluator against a hypothetical
+call without performing it. The result highlights the deciding rule and lists every rule considered.
+
+### Rate limits
+
+![Rate limit configuration and live buckets](docs/diagrams/console-rate-limits.png)
+
+Per-tenant configuration, editable by an operator holding `gateway:admin`, and the live bucket state
+read straight from Redis — what the limiter is working with, not what was configured.
+
+### Tracing
+
+![A tool call in Jaeger](docs/diagrams/trace-example.png)
+
+One tool call: the policy evaluation, both token exchanges against the identity provider, the
+dispatch to the target server, and the audit append.
+
+<details>
+<summary>Sign-in and settings</summary>
+
+![Sign in](docs/diagrams/console-signin.png)
+
+The OAuth flow terminates in a backend-for-frontend — the browser receives an opaque session cookie
+and never an access token.
+
+![Settings](docs/diagrams/console-settings.png)
+
+Application roles here are mirrored one-to-one into the Postgres roles the warehouse server assumes
+per request.
+
+</details>
+
 ## Repository layout
 
 ```
@@ -387,6 +449,20 @@ Honest about what a production deployment would need next:
   serialises on one lock. See BENCHMARKS.md for how to confirm it and AUDIT_LOG.md for the fix.
 - **Fastify 5.** Pinned to 4 to match the stated stack; the upgrade is contained.
 - **Dashboard test depth.** One Playwright smoke test today; the console deserves more.
+
+## Known issues
+
+Found while capturing the screenshots above, recorded here rather than quietly left in:
+
+- **Trace context does not reach the MCP servers.** All four services export traces, and the
+  gateway-side spans join correctly, but each MCP server's inbound span starts a new trace instead
+  of continuing the caller's. The `traceparent` is injected on the outbound call, so the fault is in
+  extraction or propagator setup on the receiving side. The architecture notes describe the intended
+  four-service trace; today it is two.
+- **Application metrics were not reaching Prometheus** because the package barrel evaluated the
+  instrument module before the SDK started, binding every instrument to a no-op meter. Fixed by
+  deferring instrument creation to first use, but the Grafana dashboards have not been
+  re-verified against a rebuilt image, so they are not screenshotted here.
 
 ## License
 
