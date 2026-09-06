@@ -1,9 +1,11 @@
 # Benchmarks
 
-**This file contains no numbers yet. That is deliberate.**
+**No benchmark number appears anywhere in this project except in this file, next to the machine it
+came from.** A figure without that context is decoration.
 
-A benchmark figure without the machine, the configuration and the method behind it is decoration.
-Run it yourself, on hardware you can name, and fill in the table below.
+The run below is a real measurement, recorded so the method is checkable — not a claim about what
+this design is capable of. It was taken on a four-year-old laptop running every container, both
+databases and the load generator on the same eight cores. Run it yourself and add your own.
 
 ---
 
@@ -67,45 +69,60 @@ The harness:
 
 Copy this block per run.
 
-### Run 1
+### Run 1 — baseline on constrained hardware
 
-|                      |                              |
-| -------------------- | ---------------------------- |
-| Date                 |                              |
-| Commit               | `git rev-parse --short HEAD` |
-| Machine              | CPU / cores / RAM            |
-| OS                   |                              |
-| Docker               | Desktop or native, version   |
-| Node                 | `node -v`                    |
-| Tool exercised       |                              |
-| Connections          |                              |
-| Duration             |                              |
-| Rate limit in effect |                              |
+|                      |                                                              |
+| -------------------- | ------------------------------------------------------------ |
+| Date                 | 2026-09-06                                                   |
+| Commit               | `5d62fb6`                                                    |
+| Machine              | Intel i5-10300H @ 2.50 GHz, 8 logical cores, 8 GB RAM        |
+| OS                   | Windows 11                                                   |
+| Docker               | Docker Desktop 28.1.1 (WSL2 backend)                         |
+| Node                 | v24.15.0 (load generator); images run Node 20                |
+| Deployment           | all 14 containers plus the load generator on the one machine |
+| Tool exercised       | `salesforce` / `sf.list_opportunities`                       |
+| Rate limit in effect | 600/min per user (enterprise plan) — not reached             |
 
-**Throughput**
+**Serial latency — 1 connection, 8 s**
 
-|                     |     |
-| ------------------- | --- |
-| Requests            |     |
-| Requests / second   |     |
-| Successful / second |     |
+| min  | p50  | p99   | mean | requests/sec |
+| ---- | ---- | ----- | ---- | ------------ |
+| 36.6 | 78.5 | 291.9 | 92.2 | 10.8         |
 
-**Latency (ms)**
+**Under concurrency — 20 connections, 10 s**
 
-| min | p50 | p75 | p90 | p95 | p99 | max | mean |
-| --- | --- | --- | --- | --- | --- | --- | ---- |
-|     |     |     |     |     |     |     |      |
+| min    | p50    | p75    | p90    | p95    | p99    | max    | mean   |
+| ------ | ------ | ------ | ------ | ------ | ------ | ------ | ------ |
+| 1355.1 | 3167.4 | 3977.4 | 4658.5 | 4803.4 | 4960.9 | 4960.9 | 3221.8 |
 
-**Outcomes**
-
-| 200 | 429 | other |
-| --- | --- | ----- |
-|     |     |       |
+| requests | requests/sec | 200 | 429 | other |
+| -------- | ------------ | --- | --- | ----- |
+| 68       | 6.0          | 68  | 0   | 0     |
 
 **Notes**
 
-<!-- Anything that would change the reading: contention on the machine, a cold cache, a limit that
-     was hit, a change you made to the configuration. -->
+Serial latency is what you would expect from the path: roughly 78 ms covering token verification,
+two Redis round trips, a policy call that is itself a network request to another container, a cached
+token exchange, the upstream MCP call, and a synchronous audit append.
+
+The interesting result is that **throughput falls as concurrency rises** — 10.8 requests/second with
+one connection, 6.0 with twenty. That is the signature of serialisation, not saturation, and this run
+does not distinguish between the two plausible causes:
+
+1. **The audit chain-head lock.** Every request in this run is for one tenant, so every append
+   contends on the same `SELECT ... FOR UPDATE`. This is the behaviour the per-tenant chain design
+   predicts, and the section below says to test it by spreading load across tenants.
+2. **Per-call MCP client construction.** The gateway builds a client and completes an `initialize`
+   handshake for each upstream call, and it makes two of them per request (policy, then target). On
+   a machine where every container competes for the same cores that is a meaningful fixed cost.
+
+Both are addressable and neither is inherent to the design; they are named in the roadmap. What this
+run establishes is the method and a baseline to measure a fix against — which is more useful than a
+flattering number from a machine nobody can check.
+
+Do not read these figures as a capacity estimate. A deployment with the databases on their own
+hardware, several gateway replicas and load spread across tenants would behave differently, and the
+only honest way to find out is to run it there.
 
 ---
 
@@ -120,9 +137,12 @@ Copy this block per run.
 
 Some things worth checking against your own numbers rather than taking on faith:
 
-**p50 against p99.** A wide gap usually means the audit append is queueing behind the per-tenant
-chain-head lock. Single-tenant load tests all contend on one lock; spreading load across tenants
-should narrow it. If it does, that is the lock, and `AUDIT_LOG.md` describes the sharding answer.
+**p50 against p99, and throughput against concurrency.** If throughput falls as connections rise,
+something is serialising. The first thing to test is the audit chain-head lock: run the same load
+split across `acme-corp`, `globex` and `initech`, which contend on three different locks instead of
+one. If throughput improves roughly threefold, that is the lock, and `AUDIT_LOG.md` describes the
+sharding answer. If it does not, the cost is elsewhere — take a single trace in Jaeger and look at
+where the wall-clock time actually sits.
 
 **Cached against uncached exchange.** The Permission Mirroring dashboard splits token exchange
 latency by cache outcome. If the hit rate is not near 100 % during a steady-state run, something is
