@@ -295,7 +295,10 @@ More in [docs/AUDIT_LOG.md](docs/AUDIT_LOG.md).
 
 ## Benchmarks
 
-**This repository contains no benchmark numbers, because none have been measured on your machine.**
+**No benchmark number appears in this README.** [docs/BENCHMARKS.md](docs/BENCHMARKS.md) carries one
+measured run, next to the machine it came from and an honest reading of what it does and does not
+show — including a throughput result that gets _worse_ under concurrency, and the two candidate
+causes it does not yet distinguish between.
 
 `scripts/load-test.ts` drives real tool calls through the running gateway — the whole enforcement
 path, not a microbenchmark — and reports the distribution it actually achieved:
@@ -371,6 +374,12 @@ Honest about what a production deployment would need next:
   the audit table already covers durability.
 - **Token exchange without a round trip.** Cache warming or provider-side batch exchange for the
   cold-start path.
+- **Upstream client reuse.** The gateway builds an MCP client and completes an `initialize`
+  handshake per call, twice per request. Pooling per destination — with the per-request token
+  supplied at call time rather than transport construction — would remove a fixed cost that shows up
+  clearly in the benchmark.
+- **Audit contention under single-tenant load.** Per-tenant chains mean a single busy tenant
+  serialises on one lock. See BENCHMARKS.md for how to confirm it and AUDIT_LOG.md for the fix.
 - **Fastify 5.** Pinned to 4 to match the stated stack; the upgrade is contained.
 - **Dashboard test depth.** One Playwright smoke test today; the console deserves more.
 
