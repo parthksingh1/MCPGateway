@@ -1,5 +1,6 @@
 import { AuditWriter } from '@mcpgateway/audit';
 import { JwksCache, OAuthClient, TokenExchangeService } from '@mcpgateway/auth';
+import { closeUpstreamPool } from '@mcpgateway/mcp-runtime';
 import { RateLimitConfigStore, RateLimitService, TokenBucketLimiter } from '@mcpgateway/rate-limit';
 import type { GatewayConfig } from '@mcpgateway/shared';
 import { createDatabase, type DbHandle } from '@mcpgateway/shared/db';
@@ -153,6 +154,7 @@ export async function createServices(config: GatewayConfig): Promise<GatewayServ
     stream,
     targets,
     close: async () => {
+      await closeUpstreamPool().catch(() => undefined);
       await rateLimitConfigs.stop().catch(() => undefined);
       stream.close();
       redis.disconnect();
