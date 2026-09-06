@@ -1,3 +1,4 @@
+import { upstreamPoolStats } from '@mcpgateway/mcp-runtime';
 import { sql } from 'drizzle-orm';
 import type { FastifyPluginAsync } from 'fastify';
 
@@ -72,6 +73,7 @@ export function createHealthRoutes(services: GatewayServices): FastifyPluginAsyn
         ready,
         checks,
         jwks: services.jwks.getStats(),
+        upstreamPool: upstreamPoolStats(),
       });
     });
   };
