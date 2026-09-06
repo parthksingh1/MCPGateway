@@ -30,6 +30,12 @@ export interface WarehouseOptions {
 export const EXPOSED_TABLES = ['customers', 'products', 'orders', 'order_items'] as const;
 export type ExposedTable = (typeof EXPOSED_TABLES)[number];
 
+/**
+ * Upper bound on the row counts reported by `pg.list_tables`. Large enough to
+ * be useful, small enough that the listing stays O(1) in table size.
+ */
+const LIST_TABLES_COUNT_CAP = 10_000;
+
 const ROLE_TO_DB_ROLE: Record<Role, string> = {
   admin: 'app_admin',
   manager: 'app_manager',
@@ -118,8 +124,9 @@ export class Warehouse {
   }
 
   async listTables(caller: WarehouseCaller): Promise<{
-    tables: { name: string; rowsVisible: number; description: string }[];
+    tables: { name: string; rowsVisible: number; exact: boolean; description: string }[];
     appliedRole: string;
+    countedUpTo: number;
   }> {
     return withSpan('warehouse.list_tables', async () => {
       const descriptions: Record<ExposedTable, string> = {
@@ -129,21 +136,42 @@ export class Warehouse {
         order_items: 'Order line items joining orders to products',
       };
 
+      // Counting is bounded rather than exhaustive. An unbounded COUNT(*) is a
+      // full scan of every visible row, and `order_items` is only visible
+      // through a correlated EXISTS against `orders`, so the planner evaluates
+      // that predicate per row. On a modest warehouse that alone exceeded the
+      // statement timeout — a listing endpoint that gets slower as the data
+      // grows, to render a number nobody reads precisely.
+      //
+      // Stopping at the cap gives an O(cap) answer that still respects
+      // row-level security, and the response says which counts are exact so the
+      // caller is not misled.
+      const cap = LIST_TABLES_COUNT_CAP;
+
       return this.withCallerContext(caller, async (client) => {
-        const tables: { name: string; rowsVisible: number; description: string }[] = [];
+        const tables: {
+          name: string;
+          rowsVisible: number;
+          exact: boolean;
+          description: string;
+        }[] = [];
+
         for (const table of EXPOSED_TABLES) {
           // Counted through the caller's own role, so "rows visible" means
           // visible to them rather than the true table size.
           const result = await client.query<{ count: string }>(
-            `SELECT COUNT(*)::text AS count FROM ${table}`,
+            `SELECT COUNT(*)::text AS count FROM (SELECT 1 FROM ${table} LIMIT ${cap + 1}) AS capped`,
           );
+          const counted = Number(result.rows[0]?.count ?? 0);
           tables.push({
             name: table,
-            rowsVisible: Number(result.rows[0]?.count ?? 0),
+            rowsVisible: Math.min(counted, cap),
+            exact: counted <= cap,
             description: descriptions[table],
           });
         }
-        return { tables, appliedRole: ROLE_TO_DB_ROLE[caller.role] };
+
+        return { tables, appliedRole: ROLE_TO_DB_ROLE[caller.role], countedUpTo: cap };
       });
     });
   }
