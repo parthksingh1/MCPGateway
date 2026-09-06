@@ -314,7 +314,12 @@ fetch), computes percentiles from every sample rather than an estimate, and warn
 requests were rate limited — in which case the latency figures describe refusals rather than work.
 
 Record what you get in [docs/BENCHMARKS.md](docs/BENCHMARKS.md), which has a template and asks for
-the hardware alongside the numbers.
+the hardware alongside the numbers. Two runs are recorded there already, and the second is worth
+reading for the method rather than the figures: the first run showed throughput _falling_ as
+concurrency rose, and the obvious suspect — the audit chain-head lock — turned out to be the wrong
+one. Timing each layer separately put the cost in the MCP `initialize` handshake, which the gateway
+was paying twice per request. Pooling those connections took p50 from 78 ms to 39 ms and tripled
+throughput under load.
 
 ---
 
